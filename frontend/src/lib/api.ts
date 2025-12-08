@@ -132,6 +132,19 @@ export type SubscriptionStatus = {
   is_active: boolean;
 };
 
+export type Invoice = {
+  id: string;
+  status: string;
+  amount_due: number;
+  amount_paid: number;
+  currency: string;
+  hosted_invoice_url?: string | null;
+  invoice_pdf?: string | null;
+  created: string;
+  period_start?: string | null;
+  period_end?: string | null;
+};
+
 export async function fetchPlans(): Promise<PlanPublic[]> {
   const response = await apiFetch("/billing/plans", { method: "GET" });
   if (!response.ok) {
@@ -195,6 +208,15 @@ export async function resumeSubscription(): Promise<SubscriptionStatus> {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: "Failed to resume subscription" }));
     throw new Error(error.detail || "Failed to resume subscription");
+  }
+  return response.json();
+}
+
+export async function fetchInvoices(): Promise<Invoice[]> {
+  const response = await apiFetch("/billing/invoices", { method: "GET" });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Failed to load invoices" }));
+    throw new Error(error.detail || "Failed to load invoices");
   }
   return response.json();
 }

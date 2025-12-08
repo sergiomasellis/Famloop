@@ -1,6 +1,6 @@
-# Tapestry Design Guide (Neo-Brutalism)
+# FamLoop Design Guide (Neo-Brutalism)
 
-This document outlines the styling conventions for Tapestry, following a **Neo-Brutalist** aesthetic. This guide is intended for both human developers and AI agents to ensure consistency across the application.
+This document outlines the styling conventions for FamLoop, following a **Neo-Brutalist** aesthetic. This guide is intended for both human developers and AI agents to ensure consistency across the application.
 
 ## Core Philosophy
 

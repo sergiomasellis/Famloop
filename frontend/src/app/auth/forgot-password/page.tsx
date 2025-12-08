@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="w-full max-w-[400px]">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-black uppercase tracking-tighter text-foreground">Tapestry</h1>
+          <h1 className="text-4xl font-black uppercase tracking-tighter text-foreground">FamLoop</h1>
         </div>
         
         <Card className="border-4 border-border shadow-[8px_8px_0px_0px_var(--shadow-color)] rounded-xl bg-card overflow-hidden">
@@ -67,7 +67,7 @@ export default function ForgotPasswordPage() {
                   <label className="text-sm font-bold uppercase text-foreground" htmlFor="email">Email</label>
                   <Input
                     id="email"
-                    placeholder="catherine.shaw@gmail.com"
+                    placeholder="email@gmail.com"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}

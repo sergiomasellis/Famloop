@@ -6,7 +6,7 @@ Supports SQLite (development) and PostgreSQL (production).
 import logging
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
-from sqlalchemy.pool import QueuePool, StaticPool
+from sqlalchemy.pool import QueuePool, StaticPool, SingletonThreadPool
 
 from ..config import settings
 
@@ -29,11 +29,12 @@ def create_database_engine():
     if settings.is_sqlite:
         # SQLite configuration (development)
         logger.info("Using SQLite database")
+        pool_class = StaticPool if database_url.endswith(":memory:") else SingletonThreadPool
         engine = create_engine(
             database_url,
             echo=settings.debug,
             connect_args={"check_same_thread": False},
-            poolclass=StaticPool,  # SQLite works best with StaticPool
+            poolclass=pool_class,
         )
 
         # Enable foreign keys for SQLite

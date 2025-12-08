@@ -17,11 +17,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tapestry",
+  title: "FamLoop",
   description: "Family calendar, chores, and rewards",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
-  applicationName: "Tapestry",
-  appleWebApp: { title: "Tapestry", capable: true, statusBarStyle: "default" },
+  applicationName: "FamLoop",
+  appleWebApp: { title: "FamLoop", capable: true, statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
@@ -38,7 +38,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider
           defaultTheme="system"
-          storageKey="tapestry-ui-theme"
+          storageKey="famloop-ui-theme"
         >
           <ErrorBoundaryWrapper>
             <AuthProvider>

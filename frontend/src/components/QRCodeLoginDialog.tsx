@@ -182,7 +182,7 @@ export function QRCodeLoginDialog({ open, onOpenChange }: QRCodeLoginDialogProps
                 <span className="text-sm font-bold text-muted-foreground">Waiting for scan...</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Open the Tapestry app on your phone and scan this code
+                Open the FamLoop app on your phone and scan this code
               </p>
             </div>
           )}

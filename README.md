@@ -1,9 +1,9 @@
-# Tapestry - Family Calendar Application
+# FamLoop - Family Calendar Application
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 ## Overview
-Tapestry is a modern, touch-friendly multi-user calendar application designed for families. It provides a weekly view of events, chore tracking with a point system, and a leaderboard to encourage children to complete their tasks.
+FamLoop is a modern, touch-friendly multi-user calendar application designed for families. It provides a weekly view of events, chore tracking with a point system, and a leaderboard to encourage children to complete their tasks.
 
 <img width="1103" height="1030" alt="image" src="https://github.com/user-attachments/assets/5041e590-4f73-4ef0-bba1-71757d9381a1" />
 
@@ -158,7 +158,7 @@ docker-compose up -d --build
 4. Update CORS_ORIGINS to match your frontend domain
 
 ## Contributing
-To contribute to Tapestry:
+To contribute to FamLoop:
 1. Fork the repository
 2. Create a feature branch
 3. Commit your changes

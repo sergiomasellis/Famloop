@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Star
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function Home() {
   return (
@@ -177,6 +178,81 @@ export default function Home() {
                   Admin Panel
                   <ArrowRight className="size-4" />
                 </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="space-y-6">
+        <div className="text-center space-y-3">
+          <h2 className="text-3xl font-bold tracking-tight">Simple Pricing</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Start free, upgrade when you need recurring chores, more kids, or integrations.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          <Card className="border-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Free</CardTitle>
+                <Badge variant="outline">Start here</Badge>
+              </div>
+              <p className="text-3xl font-bold"> $0 </p>
+              <p className="text-muted-foreground">1 family, up to 2 kids</p>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <ul className="space-y-2">
+                <li>Basic calendar and chores</li>
+                <li>Points and rewards</li>
+                <li>Great for trying FamLoop</li>
+              </ul>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/auth/signup">Get started</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 border-primary/40 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Family Plus</CardTitle>
+                <Badge>Popular</Badge>
+              </div>
+              <p className="text-3xl font-bold">$10/mo</p>
+              <p className="text-muted-foreground">1 family, up to 6 kids</p>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <ul className="space-y-2">
+                <li>All Free features</li>
+                <li>Recurring chores + calendar sharing</li>
+                <li>Rewards & deeper reporting</li>
+              </ul>
+              <Button asChild className="w-full">
+                <Link href="/pricing">See details</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Family Pro</CardTitle>
+                <Badge variant="secondary">Best value</Badge>
+              </div>
+              <p className="text-3xl font-bold">$18/mo</p>
+              <p className="text-muted-foreground">Unlimited kids + integrations</p>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <ul className="space-y-2">
+                <li>All Plus features</li>
+                <li>Integrations (Google/ICS) and priority support</li>
+                <li>Annual discount available</li>
+              </ul>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/pricing">See details</Link>
               </Button>
             </CardContent>
           </Card>

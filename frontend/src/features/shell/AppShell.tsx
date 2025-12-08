@@ -69,7 +69,7 @@ export function AppShell({ children }: AppShellProps) {
         <div className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="font-semibold">Tapestry</span>
+              <span className="font-semibold">FamLoop</span>
               <span>•</span>
               <span>© {new Date().getFullYear()}</span>
             </div>

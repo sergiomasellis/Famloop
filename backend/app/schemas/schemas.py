@@ -134,6 +134,19 @@ class PortalSessionResponse(BaseModel):
     url: str
 
 
+class InvoiceOut(BaseModel):
+    id: str
+    status: str
+    amount_due: int
+    amount_paid: int
+    currency: str
+    hosted_invoice_url: Optional[str] = None
+    invoice_pdf: Optional[str] = None
+    created: datetime
+    period_start: Optional[datetime] = None
+    period_end: Optional[datetime] = None
+
+
 # QR Code Login
 class QRCodeSessionResponse(BaseModel):
     session_token: str

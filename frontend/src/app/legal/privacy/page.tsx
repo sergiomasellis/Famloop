@@ -51,7 +51,7 @@ export default function PrivacyPolicyPage() {
       <Card>
         <CardContent className="pt-6 prose dark:prose-invert max-w-none">
           <p className="text-lg leading-relaxed">
-            Tapestry (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting your privacy and the privacy of your family members, especially children. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our family calendar and chore management application.
+            FamLoop (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting your privacy and the privacy of your family members, especially children. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our family calendar and chore management application.
           </p>
           <p className="text-muted-foreground">
             Effective Date: {effectiveDate}
@@ -151,7 +151,7 @@ export default function PrivacyPolicyPage() {
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">We use the information we collect to:</p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-            <li>Provide, operate, and maintain Tapestry services</li>
+            <li>Provide, operate, and maintain FamLoop services</li>
             <li>Display your family calendar, events, and chores</li>
             <li>Track points and progress toward goals</li>
             <li>Generate age-appropriate chore suggestions using AI</li>
@@ -174,20 +174,20 @@ export default function PrivacyPolicyPage() {
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           <p className="font-medium">
-            Tapestry is designed for family use and may include children under 13. We are committed to complying with the Children&apos;s Online Privacy Protection Act (COPPA).
+            FamLoop is designed for family use and may include children under 13. We are committed to complying with the Children&apos;s Online Privacy Protection Act (COPPA).
           </p>
 
           <div className="space-y-3">
             <h3 className="font-semibold">Parental Consent</h3>
             <p className="text-muted-foreground">
-              Child accounts can only be created by a parent or guardian who has an account with Tapestry. By creating a child account, parents consent to the collection of limited information for their children.
+              Child accounts can only be created by a parent or guardian who has an account with FamLoop. By creating a child account, parents consent to the collection of limited information for their children.
             </p>
           </div>
 
           <div className="space-y-3">
             <h3 className="font-semibold">Information Collected from Children</h3>
             <p className="text-muted-foreground">
-              We collect only the minimum information necessary for children to use Tapestry:
+              We collect only the minimum information necessary for children to use FamLoop:
             </p>
             <ul className="list-disc list-inside space-y-1 text-muted-foreground">
               <li>Name (or nickname) chosen by the parent</li>
@@ -392,7 +392,7 @@ export default function PrivacyPolicyPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Tapestry uses minimal cookies and similar technologies:
+            FamLoop uses minimal cookies and similar technologies:
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
             <li><strong>Essential cookies:</strong> Required for authentication and security (session tokens)</li>
@@ -412,7 +412,7 @@ export default function PrivacyPolicyPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Tapestry may integrate with third-party services at your request:
+            FamLoop may integrate with third-party services at your request:
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
             <li><strong>Google Calendar:</strong> OAuth2 integration to sync your events</li>
@@ -440,7 +440,7 @@ export default function PrivacyPolicyPage() {
             <li>For significant changes, we may ask for renewed consent</li>
           </ul>
           <p className="text-muted-foreground">
-            Your continued use of Tapestry after changes constitutes acceptance of the updated policy.
+            Your continued use of FamLoop after changes constitutes acceptance of the updated policy.
           </p>
         </CardContent>
       </Card>
@@ -458,8 +458,8 @@ export default function PrivacyPolicyPage() {
             If you have questions, concerns, or requests regarding this Privacy Policy or your personal data, please contact us:
           </p>
           <div className="p-4 rounded-lg bg-muted space-y-2">
-            <p><strong>Email:</strong> privacy@tapestry.app</p>
-            <p><strong>Subject Line:</strong> Privacy Inquiry - Tapestry</p>
+            <p><strong>Email:</strong> privacy@famloop.app</p>
+            <p><strong>Subject Line:</strong> Privacy Inquiry - FamLoop</p>
           </div>
           <p className="text-muted-foreground">
             For GDPR-related requests, please include &quot;GDPR Request&quot; in the subject line. We will respond within 30 days.

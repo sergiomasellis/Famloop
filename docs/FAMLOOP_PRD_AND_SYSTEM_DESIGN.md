@@ -1,4 +1,4 @@
-# Tapestry - Family Calendar Application
+# FamLoop - Family Calendar Application
 ## PRD (Product Requirements Document) and System Design
 
 ---
@@ -7,7 +7,7 @@
 
 ### 1.1 Product Overview
 
-Tapestry is a modern, touch-friendly family calendar application designed to help families organize their schedules, track household chores, and motivate children through a gamified point system. The application integrates with multiple calendar sources (iCalendar, Google Calendar, Alexa Reminders) to provide a unified view of family activities while adding a unique chore management system powered by AI.
+FamLoop is a modern, touch-friendly family calendar application designed to help families organize their schedules, track household chores, and motivate children through a gamified point system. The application integrates with multiple calendar sources (iCalendar, Google Calendar, Alexa Reminders) to provide a unified view of family activities while adding a unique chore management system powered by AI.
 
 ### 1.2 Target Users
 

@@ -82,7 +82,7 @@ class TextFormatter(logging.Formatter):
 
 
 def setup_logging(
-    level: str = "INFO", log_format: str = "json", app_name: str = "tapestry"
+    level: str = "INFO", log_format: str = "json", app_name: str = "famloop"
 ) -> logging.Logger:
     """
     Configure structured logging for the application.

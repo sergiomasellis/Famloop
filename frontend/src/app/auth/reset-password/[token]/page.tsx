@@ -76,7 +76,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="w-full max-w-[400px]">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-black uppercase tracking-tighter text-foreground">Tapestry</h1>
+          <h1 className="text-4xl font-black uppercase tracking-tighter text-foreground">FamLoop</h1>
         </div>
         
         <Card className="border-4 border-border shadow-[8px_8px_0px_0px_var(--shadow-color)] rounded-xl bg-card overflow-hidden">

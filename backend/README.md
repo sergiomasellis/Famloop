@@ -1,4 +1,4 @@
-# Tapestry Backend (FastAPI + SQLAlchemy + LangGraph)
+# FamLoop Backend (FastAPI + SQLAlchemy + LangGraph)
 
 Stack
 - FastAPI (HTTP API)

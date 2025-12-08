@@ -50,7 +50,7 @@ export default function TermsOfServicePage() {
       <Card>
         <CardContent className="pt-6 prose dark:prose-invert max-w-none">
           <p className="text-lg leading-relaxed">
-            Welcome to Tapestry! These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Tapestry application and services. By creating an account or using Tapestry, you agree to be bound by these Terms.
+            Welcome to FamLoop! These Terms of Service (&quot;Terms&quot;) govern your access to and use of the FamLoop application and services. By creating an account or using FamLoop, you agree to be bound by these Terms.
           </p>
           <p className="text-muted-foreground">
             Effective Date: {effectiveDate}
@@ -104,14 +104,14 @@ export default function TermsOfServicePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            By accessing or using Tapestry, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy.
+            By accessing or using FamLoop, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy.
           </p>
           <p className="text-muted-foreground">
             If you do not agree to these Terms, you may not access or use our services. If you are accepting these Terms on behalf of a family or organization, you represent that you have the authority to bind them to these Terms.
           </p>
           <div className="p-4 rounded-lg bg-muted">
             <p className="font-medium">
-              You must be at least 18 years old (or the age of majority in your jurisdiction) to create a parent/admin account on Tapestry.
+              You must be at least 18 years old (or the age of majority in your jurisdiction) to create a parent/admin account on FamLoop.
             </p>
           </div>
         </CardContent>
@@ -127,7 +127,7 @@ export default function TermsOfServicePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Tapestry is a family calendar and household management application that provides:
+            FamLoop is a family calendar and household management application that provides:
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
             <li>Shared family calendar with event management</li>
@@ -153,7 +153,7 @@ export default function TermsOfServicePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            To use Tapestry, you must create an account. When registering, you agree to:
+            To use FamLoop, you must create an account. When registering, you agree to:
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
             <li>Provide accurate, current, and complete information</li>
@@ -178,7 +178,7 @@ export default function TermsOfServicePage() {
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           <p className="font-medium">
-            Tapestry is designed for family use, including children under 13.
+            FamLoop is designed for family use, including children under 13.
           </p>
 
           <div className="space-y-3">
@@ -186,7 +186,7 @@ export default function TermsOfServicePage() {
             <p className="text-muted-foreground">As a parent or guardian creating a family group, you:</p>
             <ul className="list-disc list-inside space-y-1 text-muted-foreground">
               <li>Consent to the collection of your children&apos;s information as described in our Privacy Policy</li>
-              <li>Are responsible for supervising your children&apos;s use of Tapestry</li>
+              <li>Are responsible for supervising your children&apos;s use of FamLoop</li>
               <li>Agree that any rewards or goals set are between you and your family</li>
               <li>May manage, modify, or delete child accounts at any time</li>
             </ul>
@@ -217,7 +217,7 @@ export default function TermsOfServicePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            You agree to use Tapestry only for lawful purposes and in accordance with these Terms. You agree to:
+            You agree to use FamLoop only for lawful purposes and in accordance with these Terms. You agree to:
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
             <li>Use the service only for personal, non-commercial family management</li>
@@ -239,7 +239,7 @@ export default function TermsOfServicePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            You may not use Tapestry to:
+            You may not use FamLoop to:
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
             <li>Violate any applicable law or regulation</li>
@@ -268,21 +268,21 @@ export default function TermsOfServicePage() {
           <div className="space-y-3">
             <h3 className="font-semibold">Our Content</h3>
             <p className="text-muted-foreground">
-              Tapestry and its original content, features, and functionality are owned by us and are protected by copyright, trademark, and other intellectual property laws. The Tapestry name, logo, and all related marks are our trademarks.
+              FamLoop and its original content, features, and functionality are owned by us and are protected by copyright, trademark, and other intellectual property laws. The FamLoop name, logo, and all related marks are our trademarks.
             </p>
           </div>
 
           <div className="space-y-3">
             <h3 className="font-semibold">Your Content</h3>
             <p className="text-muted-foreground">
-              You retain ownership of any content you create within Tapestry (events, chores, notes, images). By using Tapestry, you grant us a limited license to store, display, and process your content solely to provide the service.
+              You retain ownership of any content you create within FamLoop (events, chores, notes, images). By using FamLoop, you grant us a limited license to store, display, and process your content solely to provide the service.
             </p>
           </div>
 
           <div className="space-y-3">
             <h3 className="font-semibold">Feedback</h3>
             <p className="text-muted-foreground">
-              Any feedback, suggestions, or ideas you provide about Tapestry may be used by us without any obligation to you.
+              Any feedback, suggestions, or ideas you provide about FamLoop may be used by us without any obligation to you.
             </p>
           </div>
         </CardContent>
@@ -295,7 +295,7 @@ export default function TermsOfServicePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Tapestry may integrate with third-party services (Google Calendar, Amazon Alexa, etc.). By connecting these services:
+            FamLoop may integrate with third-party services (Google Calendar, Amazon Alexa, etc.). By connecting these services:
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
             <li>You authorize us to access your data on those platforms as described</li>
@@ -317,7 +317,7 @@ export default function TermsOfServicePage() {
         <CardContent className="space-y-4">
           <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
             <p className="font-medium text-yellow-800 dark:text-yellow-200">
-              TAPESTRY IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED.
+              FAMLOOP IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED.
             </p>
           </div>
 
@@ -331,7 +331,7 @@ export default function TermsOfServicePage() {
 
           <div className="p-4 rounded-lg bg-muted">
             <p className="text-sm text-muted-foreground">
-              <strong>Limitation of Liability:</strong> To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits, data, or goodwill arising from your use of Tapestry.
+              <strong>Limitation of Liability:</strong> To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits, data, or goodwill arising from your use of FamLoop.
             </p>
           </div>
         </CardContent>
@@ -344,7 +344,7 @@ export default function TermsOfServicePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            You agree to indemnify, defend, and hold harmless Tapestry and its affiliates, officers, directors, employees, and agents from any claims, damages, losses, liabilities, costs, or expenses arising from:
+            You agree to indemnify, defend, and hold harmless FamLoop and its affiliates, officers, directors, employees, and agents from any claims, damages, losses, liabilities, costs, or expenses arising from:
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
             <li>Your use of or access to the service</li>
@@ -371,7 +371,7 @@ export default function TermsOfServicePage() {
           <div className="space-y-3">
             <h3 className="font-semibold">By Us</h3>
             <p className="text-muted-foreground">
-              We may suspend or terminate your access to Tapestry at any time, with or without cause, with or without notice. Reasons may include:
+              We may suspend or terminate your access to FamLoop at any time, with or without cause, with or without notice. Reasons may include:
             </p>
             <ul className="list-disc list-inside space-y-1 text-muted-foreground">
               <li>Violation of these Terms</li>
@@ -384,7 +384,7 @@ export default function TermsOfServicePage() {
           <div className="space-y-3">
             <h3 className="font-semibold">Effect of Termination</h3>
             <p className="text-muted-foreground">
-              Upon termination, your right to use Tapestry immediately ceases. Provisions that by their nature should survive termination will survive (including intellectual property, disclaimers, and limitations of liability).
+              Upon termination, your right to use FamLoop immediately ceases. Provisions that by their nature should survive termination will survive (including intellectual property, disclaimers, and limitations of liability).
             </p>
           </div>
         </CardContent>
@@ -400,10 +400,10 @@ export default function TermsOfServicePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which Tapestry operates, without regard to its conflict of law provisions.
+            These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which FamLoop operates, without regard to its conflict of law provisions.
           </p>
           <p className="text-muted-foreground">
-            Any disputes arising from these Terms or your use of Tapestry shall be resolved through:
+            Any disputes arising from these Terms or your use of FamLoop shall be resolved through:
           </p>
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
             <li>Good faith negotiation between the parties</li>
@@ -450,8 +450,8 @@ export default function TermsOfServicePage() {
             If you have questions or concerns about these Terms of Service, please contact us:
           </p>
           <div className="p-4 rounded-lg bg-muted space-y-2">
-            <p><strong>Email:</strong> legal@tapestry.app</p>
-            <p><strong>Subject Line:</strong> Terms Inquiry - Tapestry</p>
+            <p><strong>Email:</strong> legal@famloop.app</p>
+            <p><strong>Subject Line:</strong> Terms Inquiry - FamLoop</p>
           </div>
           <p className="text-muted-foreground">
             We will make reasonable efforts to respond to your inquiry within a reasonable timeframe.
@@ -463,7 +463,7 @@ export default function TermsOfServicePage() {
       <Card>
         <CardContent className="pt-6">
           <p className="text-center text-muted-foreground">
-            By using Tapestry, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our{" "}
+            By using FamLoop, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our{" "}
             <Link href="/legal/privacy" className="text-primary hover:underline">
               Privacy Policy
             </Link>

@@ -61,7 +61,6 @@ function SettingsPageContent() {
     const success = await deleteFamily(fam.id);
     if (success) {
       refetchFamily();
-      // Optionally redirect to home or show a message
       alert("Family deleted successfully. You may need to log out and create a new family.");
     } else {
       alert("Failed to delete family. Please try again.");
@@ -149,7 +148,6 @@ function SettingsPageContent() {
 
   return (
     <div className="space-y-6">
-      {/* Family Management Section */}
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -200,155 +198,103 @@ function SettingsPageContent() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground mb-4">
-                No family found. Create your first family to get started.
-              </p>
-              <Button onClick={handleCreateFamily}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Family
-              </Button>
+            <div className="text-sm text-muted-foreground">
+              No family created yet. Create one to start adding members and managing chores.
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Family Members Section */}
-      {family && (
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <CardTitle className="flex items-center gap-2">
-                <UserPlus className="size-5" /> Family Members
-              </CardTitle>
-              <Button onClick={handleAddMember} size="sm" className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Member
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {membersLoading ? (
-              <p className="text-sm text-muted-foreground">Loading members...</p>
-            ) : members.length === 0 ? (
-              <div className="text-center py-8">
-                <UserPlus className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-sm text-muted-foreground mb-4">
-                  No family members yet. Add your first member to get started.
-                </p>
-                <Button onClick={handleAddMember}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Member
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Avatar className="h-10 w-10 shrink-0">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="size-5" /> Family Members
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              Add, edit, or remove family members. Parents require email and password; kids do not.
+            </p>
+            <Button onClick={handleAddMember} size="sm" className="w-full sm:w-auto" disabled={creatingMember || membersLoading}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Member
+            </Button>
+          </div>
+          {membersLoading ? (
+            <p className="text-sm text-muted-foreground">Loading members...</p>
+          ) : members.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No members yet. Add your family to get started.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {members.map((member) => (
+                <Card key={member.id} className="border">
+                  <CardContent className="pt-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="size-10">
                         <AvatarImage src={member.profile_image_url || undefined} alt={member.name} />
-                        <AvatarFallback>
-                          {member.icon_emoji || member.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
+                        <AvatarFallback>{member.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold break-words">{member.name}</h3>
-                          {member.id === currentUser?.id && (
-                            <Badge variant="outline" className="text-xs shrink-0">You</Badge>
-                          )}
-                          <Badge
-                            variant={member.role === "parent" ? "default" : "secondary"}
-                            className="text-xs shrink-0"
-                          >
-                            {member.role === "parent" ? "Parent" : "Child"}
-                          </Badge>
-                        </div>
-                        {member.email && (
-                          <p className="text-sm text-muted-foreground truncate">{member.email}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          Joined {format(new Date(member.created_at), "MMMM d, yyyy")}
-                        </p>
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">{member.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{member.role}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 sm:ml-4">
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
+                        className="flex-1"
                         onClick={() => handleEditMember(member)}
-                        className="flex-1 sm:flex-initial"
+                        disabled={updatingMember}
                       >
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
                       </Button>
-                      {member.id !== currentUser?.id && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteMember(member)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-1 sm:flex-initial"
-                          disabled={deletingMember}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Remove
-                        </Button>
-                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteMember(member)}
+                        disabled={deletingMember}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remove
+                      </Button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Other Admin Sections */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="size-5" /> Parental Controls
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Manage roles and master admin password.
-            </p>
-            <Button variant="outline" asChild className="w-full sm:w-auto">
-              <Link href="#">Set Master Password</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarPlus className="size-5" /> Calendar Integrations
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-              <Button asChild className="w-full sm:w-auto">
-                <Link href="#">Connect Google</Link>
-              </Button>
-              <Button variant="secondary" asChild className="w-full sm:w-auto">
-                <Link href="#">Add iCal</Link>
-              </Button>
-              <Button variant="outline" asChild className="w-full sm:w-auto">
-                <Link href="#">Connect Alexa</Link>
-              </Button>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Family Dialog */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="size-5" /> Security & Access
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>
+            Family admin password protects family-level changes. Share member logins carefully. Reset parent passwords from the login page if needed.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/auth/forgot-password">
+                Reset parent password
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/auth/login">
+                Sign in as another user
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <FamilyDialog
         open={familyDialogOpen}
         onOpenChange={setFamilyDialogOpen}
@@ -356,24 +302,20 @@ function SettingsPageContent() {
         onSave={handleSaveFamily}
       />
 
-      {/* Add Member Dialog */}
-      {family && (
-        <AddMemberDialog
-          open={addMemberDialogOpen}
-          onOpenChange={setAddMemberDialogOpen}
-          familyId={family.id}
-          onSave={handleSaveMember}
-          loading={creatingMember}
-        />
-      )}
+      <AddMemberDialog
+        open={addMemberDialogOpen}
+        onOpenChange={setAddMemberDialogOpen}
+        familyId={family?.id}
+        onSave={handleSaveMember}
+        isLoading={creatingMember}
+      />
 
-      {/* Edit Member Dialog */}
       <EditMemberDialog
         open={editMemberDialogOpen}
         onOpenChange={setEditMemberDialogOpen}
         member={editingMember}
         onSave={handleUpdateMember}
-        loading={updatingMember}
+        isLoading={updatingMember}
       />
     </div>
   );
@@ -382,7 +324,25 @@ function SettingsPageContent() {
 export default function SettingsPage() {
   return (
     <ProtectedRoute>
-      <SettingsPageContent />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Settings</h1>
+            <p className="text-muted-foreground">
+              Manage your family, members, and security preferences.
+            </p>
+          </div>
+          <Button variant="outline" asChild>
+            <Link href="/dashboard">
+              <CalendarPlus className="mr-2 h-4 w-4" />
+              Back to Dashboard
+            </Link>
+          </Button>
+        </div>
+
+        <SettingsPageContent />
+      </div>
     </ProtectedRoute>
   );
 }
+

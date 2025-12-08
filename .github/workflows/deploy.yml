@@ -103,7 +103,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
     environment:
       name: staging
-      url: https://staging.tapestry.example.com
+      url: https://staging.famloop.example.com
 
     steps:
       - name: Checkout code
@@ -128,7 +128,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.environment == 'production'
     environment:
       name: production
-      url: https://tapestry.example.com
+      url: https://famloop.example.com
 
     steps:
       - name: Checkout code

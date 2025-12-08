@@ -113,7 +113,7 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: false
-          tags: tapestry-backend:test
+          tags: famloop-backend:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -123,7 +123,7 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: false
-          tags: tapestry-frontend:test
+          tags: famloop-frontend:test
           build-args: |
             NEXT_PUBLIC_API_URL=http://localhost:8000/api
           cache-from: type=gha
