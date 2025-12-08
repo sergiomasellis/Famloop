@@ -59,6 +59,33 @@ class User(Base):
         "Chore", back_populates="assignee"
     )
     points: Mapped[list["Point"]] = relationship("Point", back_populates="user")
+    subscription: Mapped["Subscription | None"] = relationship(
+        "Subscription", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), unique=True, nullable=False
+    )
+    stripe_customer_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(
+        String, nullable=True, unique=True
+    )
+    price_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    plan: Mapped[str] = mapped_column(String, default="free")
+    status: Mapped[str] = mapped_column(String, default="inactive")
+    current_period_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="subscription")
 
 
 class Event(Base):

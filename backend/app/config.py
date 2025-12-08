@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     """Application settings with validation."""
 
     # Application
-    app_name: str = Field(default="Tapestry API", description="Application name")
+    app_name: str = Field(default="FamLoop API", description="Application name")
     app_version: str = Field(default="0.1.0", description="Application version")
     environment: str = Field(
         default="development",
@@ -49,6 +49,41 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = Field(default="INFO", description="Logging level")
     log_format: str = Field(default="json", description="Log format (json or text)")
+
+    # Stripe billing
+    stripe_secret_key: str | None = Field(
+        default=None, description="Stripe secret key for server-side calls"
+    )
+    stripe_publishable_key: str | None = Field(
+        default=None, description="Stripe publishable key for frontend"
+    )
+    stripe_webhook_secret: str | None = Field(
+        default=None, description="Stripe webhook signing secret"
+    )
+    stripe_checkout_success_url: str | None = Field(
+        default=None,
+        description="Success redirect URL for Checkout sessions (frontend URL)",
+    )
+    stripe_checkout_cancel_url: str | None = Field(
+        default=None,
+        description="Cancel redirect URL for Checkout sessions (frontend URL)",
+    )
+    stripe_billing_return_url: str | None = Field(
+        default=None,
+        description="Return URL for Stripe Billing Portal (frontend URL)",
+    )
+    stripe_price_family_plus_monthly: str | None = Field(
+        default=None, description="Stripe price ID for Family Plus monthly"
+    )
+    stripe_price_family_plus_annual: str | None = Field(
+        default=None, description="Stripe price ID for Family Plus annual"
+    )
+    stripe_price_family_pro_monthly: str | None = Field(
+        default=None, description="Stripe price ID for Family Pro monthly"
+    )
+    stripe_price_family_pro_annual: str | None = Field(
+        default=None, description="Stripe price ID for Family Pro annual"
+    )
 
     # Security headers
     enable_security_headers: bool = Field(
@@ -95,6 +130,11 @@ class Settings(BaseSettings):
     def is_sqlite(self) -> bool:
         """Check if using SQLite database."""
         return self.database_url.startswith("sqlite")
+
+    @property
+    def stripe_enabled(self) -> bool:
+        """Check if Stripe is configured."""
+        return bool(self.stripe_secret_key)
 
     class Config:
         env_file = ".env"

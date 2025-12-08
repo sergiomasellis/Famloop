@@ -13,6 +13,7 @@ from ..schemas.schemas import (
     Message,
     ChoreCompletionOut,
 )
+from ..services.subscriptions import effective_plan, get_subscription
 from .auth import get_current_user
 
 router = APIRouter()
@@ -87,6 +88,15 @@ def create_chore(
             status_code=403, detail="Cannot create chore for different family"
         )
 
+    # Enforce plan limits: recurring chores require paid plans
+    subscription = get_subscription(db, current_user.id)
+    plan = effective_plan(subscription)
+    if payload.is_recurring and plan == "free":
+        raise HTTPException(
+            status_code=403,
+            detail="Recurring chores require a paid plan. Upgrade to enable recurring chores.",
+        )
+
     chore = Chore(
         family_id=payload.family_id,
         title=payload.title,
@@ -137,6 +147,17 @@ def update_chore(
         pv = updates["point_value"]
         if pv is not None and (pv < 1 or pv > 10):
             raise HTTPException(status_code=400, detail="point_value must be 1..10")
+
+    # Prevent enabling recurring chores on the free plan
+    subscription = get_subscription(db, current_user.id)
+    plan = effective_plan(subscription)
+    if plan == "free":
+        if updates.get("is_recurring") or updates.get("recurrence_type"):
+            raise HTTPException(
+                status_code=403,
+                detail="Recurring chores require a paid plan. Upgrade to enable recurring chores.",
+            )
+
     for k, v in updates.items():
         setattr(chore, k, v)
     db.commit()

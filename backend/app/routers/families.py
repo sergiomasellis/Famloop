@@ -6,6 +6,7 @@ from typing import List
 from ..db.session import get_db
 from ..models.models import FamilyGroup, User
 from ..schemas.schemas import FamilyCreate, FamilyOut, FamilyInvite, FamilyUpdate
+from ..services.subscriptions import get_plan_limits, get_subscription, effective_plan
 from .auth import get_current_user, get_password_hash
 
 router = APIRouter()
@@ -18,6 +19,16 @@ def create_family(
     db: Session = Depends(get_db),
 ):
     """Create a new family group. Requires authentication."""
+    subscription = get_subscription(db, current_user.id)
+    plan = effective_plan(subscription)
+    limits = get_plan_limits(plan)
+
+    if limits.get("max_families") is not None and current_user.family_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Plan limit reached. Upgrade to create an additional family.",
+        )
+
     fam = FamilyGroup(
         name=payload.name,
         admin_password_hash=get_password_hash(payload.admin_password),

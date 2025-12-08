@@ -1,5 +1,5 @@
 """
-Tapestry API - Family calendar, chores, and rewards.
+FamLoop API - Family calendar, chores, and rewards.
 Production-ready FastAPI application with security, logging, and rate limiting.
 """
 
@@ -24,7 +24,7 @@ from .logging_config import setup_logging, get_request_id  # noqa: E402
 
 # Setup logging
 logger = setup_logging(
-    level=settings.log_level, log_format=settings.log_format, app_name="tapestry"
+    level=settings.log_level, log_format=settings.log_format, app_name="famloop"
 )
 
 # Import middleware
@@ -36,7 +36,16 @@ from .middleware import (  # noqa: E402
 )
 
 # Import routers
-from .routers import auth, users, families, calendars, chores, points, goals  # noqa: E402
+from .routers import (  # noqa: E402
+    auth,
+    users,
+    families,
+    calendars,
+    chores,
+    points,
+    goals,
+    billing,
+)
 from .db.session import engine, Base  # noqa: E402
 
 # Initialize rate limiter
@@ -223,6 +232,7 @@ app.include_router(calendars.router, prefix="/api/calendars", tags=["calendars"]
 app.include_router(chores.router, prefix="/api/chores", tags=["chores"])
 app.include_router(points.router, prefix="/api/points", tags=["points"])
 app.include_router(goals.router, prefix="/api/goals", tags=["goals"])
+app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 
 # Log application configuration on import
 logger.info(

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { SubscriptionStatus } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
@@ -17,6 +18,7 @@ export type User = {
 type AuthContextType = {
   user: User | null;
   token: string | null;
+  subscription: SubscriptionStatus | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string, role?: "parent" | "child") => Promise<void>;
@@ -29,6 +31,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Load token and user from localStorage on mount
@@ -43,6 +46,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const fetchSubscription = async (authToken: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/billing/subscription`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) {
+        const sub: SubscriptionStatus = await res.json();
+        setSubscription(sub);
+      } else {
+        setSubscription(null);
+      }
+    } catch (error) {
+      console.error("Failed to fetch subscription:", error);
+      setSubscription(null);
+    }
+  };
+
   const fetchUser = async (authToken: string) => {
     try {
       const res = await fetch(`${API_BASE}/auth/me`, {
@@ -53,17 +73,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const userData: User = await res.json();
         setUser(userData);
+        await fetchSubscription(authToken);
       } else {
         // Token is invalid, clear it
         localStorage.removeItem("auth_token");
         setToken(null);
         setUser(null);
+        setSubscription(null);
       }
     } catch (error) {
       console.error("Failed to fetch user:", error);
       localStorage.removeItem("auth_token");
       setToken(null);
       setUser(null);
+      setSubscription(null);
     } finally {
       setLoading(false);
     }
@@ -131,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("auth_token");
     setToken(null);
     setUser(null);
+    setSubscription(null);
   };
 
   return (
@@ -138,6 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         token,
+        subscription,
         loading,
         login,
         signup,

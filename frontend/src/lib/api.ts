@@ -109,5 +109,95 @@ export async function checkQRCodeStatus(sessionToken: string): Promise<{ status:
 }
 
 
+// Billing types
+export type PlanPublic = {
+  name: "free" | "family_plus" | "family_pro";
+  label: string;
+  description: string;
+  currency: string;
+  monthly_price_cents: number | null;
+  annual_price_cents: number | null;
+  price_monthly_id?: string | null;
+  price_annual_id?: string | null;
+  max_children?: number | null;
+  max_families?: number | null;
+};
+
+export type SubscriptionStatus = {
+  plan: PlanPublic["name"];
+  status: string;
+  price_id?: string | null;
+  current_period_end?: string | null;
+  cancel_at_period_end: boolean;
+  is_active: boolean;
+};
+
+export async function fetchPlans(): Promise<PlanPublic[]> {
+  const response = await apiFetch("/billing/plans", { method: "GET" });
+  if (!response.ok) {
+    throw new Error("Unable to load plans");
+  }
+  return response.json();
+}
+
+export async function fetchSubscription(): Promise<SubscriptionStatus> {
+  const response = await apiFetch("/billing/subscription", { method: "GET" });
+  if (!response.ok) {
+    throw new Error("Unable to load subscription status");
+  }
+  return response.json();
+}
+
+export async function createCheckoutSession(priceId: string, successUrl?: string, cancelUrl?: string): Promise<{ url: string }> {
+  const body: Record<string, string> = { price_id: priceId };
+  if (successUrl) body.success_url = successUrl;
+  if (cancelUrl) body.cancel_url = cancelUrl;
+
+  const response = await apiFetch("/billing/checkout", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Failed to start checkout" }));
+    throw new Error(error.detail || "Failed to start checkout");
+  }
+
+  const data = await response.json();
+  return { url: data.url };
+}
+
+export async function createBillingPortalSession(returnUrl?: string): Promise<{ url: string }> {
+  const response = await apiFetch("/billing/portal", {
+    method: "POST",
+    body: JSON.stringify({ return_url: returnUrl }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Failed to open billing portal" }));
+    throw new Error(error.detail || "Failed to open billing portal");
+  }
+
+  return response.json();
+}
+
+export async function cancelSubscription(): Promise<SubscriptionStatus> {
+  const response = await apiFetch("/billing/cancel", { method: "POST" });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Failed to cancel subscription" }));
+    throw new Error(error.detail || "Failed to cancel subscription");
+  }
+  return response.json();
+}
+
+export async function resumeSubscription(): Promise<SubscriptionStatus> {
+  const response = await apiFetch("/billing/resume", { method: "POST" });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Failed to resume subscription" }));
+    throw new Error(error.detail || "Failed to resume subscription");
+  }
+  return response.json();
+}
+
 
 

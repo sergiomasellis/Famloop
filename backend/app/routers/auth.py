@@ -12,6 +12,7 @@ import bcrypt
 from ..config import settings
 from ..db.session import get_db
 from ..models.models import User, FamilyGroup, PasswordResetToken, QRCodeSession
+from ..services.subscriptions import upsert_subscription
 from ..schemas.schemas import (
     Token,
     LoginRequest,
@@ -157,6 +158,18 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    # Seed a subscription row for this user (defaults to free)
+    upsert_subscription(
+        db=db,
+        user=user,
+        price_id=None,
+        stripe_subscription_id=None,
+        stripe_customer_id=None,
+        status="inactive",
+        current_period_end=None,
+        cancel_at_period_end=False,
+    )
 
     # Generate token
     access_token = create_access_token(data={"sub": str(user.id)})
@@ -313,8 +326,8 @@ def generate_qr_code_session(db: Session = Depends(get_db)):
     db.refresh(qr_session)
 
     # Construct QR code URL (deep link format for mobile app)
-    # Format: tapestry://login?token=<session_token>
-    qr_code_url = f"tapestry://login?token={session_token}"
+    # Format: famloop://login?token=<session_token>
+    qr_code_url = f"famloop://login?token={session_token}"
 
     return QRCodeSessionResponse(
         session_token=session_token,

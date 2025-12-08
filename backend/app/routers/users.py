@@ -3,9 +3,10 @@ from sqlalchemy.orm import Session
 from ..db.session import get_db
 from ..models.models import User, FamilyGroup
 from ..schemas.schemas import UserCreate, UserOut, UserUpdate
+from ..services.subscriptions import effective_plan, get_plan_limits, get_subscription
 from typing import List
 from datetime import datetime
-from sqlalchemy import select
+from sqlalchemy import select, func
 from .auth import get_current_user, get_password_hash
 import secrets
 
@@ -55,6 +56,28 @@ def create_user(
         raise HTTPException(
             status_code=404, detail=f"Family with id {family_id} not found"
         )
+
+    # Enforce plan limits for child accounts
+    if payload.role == "child":
+        subscription = get_subscription(db, current_user.id)
+        plan = effective_plan(subscription)
+        limits = get_plan_limits(plan)
+        max_children = limits.get("max_children")
+
+        if max_children is not None:
+            child_count = (
+                db.execute(
+                    select(func.count()).where(
+                        User.family_id == family_id, User.role == "child"
+                    )
+                )
+                .scalar_one()
+            )
+            if child_count >= max_children:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Child limit reached for this plan. Upgrade to add more children.",
+                )
 
     # For children, use a placeholder password hash (they can't log in)
     # For parents, use the provided password
