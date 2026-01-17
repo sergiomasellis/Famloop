@@ -4,12 +4,12 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Plus, 
-  Sparkles, 
-  Clock, 
-  AlertCircle, 
-  CheckCircle2, 
+import {
+  Plus,
+  Sparkles,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
   Star,
   Target,
   PartyPopper,
@@ -19,11 +19,11 @@ import {
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ChoreDialog } from "@/features/chores/components/ChoreDialog";
-import { useChores } from "@/hooks/useChores";
-import { useFamilyMembers } from "@/hooks/useFamilyMembers";
+import { useChores, Chore, ChoreCreate, ChoreUpdate } from "@/hooks/useChores";
+import { useFamilyMembers, FamilyMember } from "@/hooks/useFamilyMembers";
 import { useFamily } from "@/hooks/useFamily";
-import { Chore, ChoreCreate, ChoreUpdate, FamilyMember } from "@/types";
-import { differenceInDays, parseISO, addDays } from "date-fns";
+import { Id } from "../../../convex/_generated/dataModel";
+import { differenceInDays, addDays, startOfWeek } from "date-fns";
 
 // Color schemes for family members - Neo-Brutalist solid colors
 const MEMBER_COLORS = [
@@ -98,15 +98,15 @@ function ProgressRing({ progress, size = 100 }: { progress: number; size?: numbe
 }
 
 // Chore card component
-function ChoreCard({ 
-  chore, 
-  familyMembers, 
+function ChoreCard({
+  chore,
+  familyMembers,
   colorScheme,
   onToggleComplete,
   onEdit,
   onDelete,
   daysRemaining,
-}: { 
+}: {
   chore: Chore;
   familyMembers: FamilyMember[];
   colorScheme: typeof MEMBER_COLORS[0];
@@ -116,27 +116,20 @@ function ChoreCard({
   daysRemaining: number | null;
 }) {
   const [isAnimating, setIsAnimating] = useState(false);
-  
-  // Get all assignees (from assigned_to_ids or fall back to single assigned_to)
+
+  // Get all assignees from assignedToIds array
   const getAssignees = (): FamilyMember[] => {
-    if (chore.assigned_to_ids) {
-      const ids = chore.assigned_to_ids.split(",").map(Number).filter(Boolean);
-      return familyMembers.filter((m) => ids.includes(m.id));
-    }
-    if (chore.assigned_to) {
-      const member = familyMembers.find((m) => m.id === chore.assigned_to);
-      return member ? [member] : [];
+    if (chore.assignedToIds && chore.assignedToIds.length > 0) {
+      return familyMembers.filter((m) => chore.assignedToIds?.includes(m._id));
     }
     return [];
   };
   const assignees = getAssignees();
-  
+
   // For individual chores, get who has completed
-  const completedByIds = chore.completed_by_ids 
-    ? chore.completed_by_ids.split(",").map(Number).filter(Boolean) 
-    : [];
-  const isIndividualChore = chore.is_group_chore === false && assignees.length > 1;
-  const individualProgress = isIndividualChore 
+  const completedByIds = chore.completedByIds || [];
+  const isIndividualChore = chore.isGroupChore === false && assignees.length > 1;
+  const individualProgress = isIndividualChore
     ? { done: completedByIds.length, total: assignees.length }
     : null;
 
@@ -179,7 +172,7 @@ function ChoreCard({
               <h3 className={`font-semibold ${chore.completed ? 'line-through text-muted-foreground' : ''}`}>
                 {chore.title}
               </h3>
-              {chore.is_recurring && (
+              {chore.isRecurring && (
                 <Badge className="text-xs gap-1 bg-secondary text-secondary-foreground border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] uppercase font-black">
                   <Repeat className="h-3 w-3" />
                   Recurring
@@ -189,11 +182,11 @@ function ChoreCard({
             {chore.description && (
               <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">{chore.description}</p>
             )}
-            {chore.is_recurring && chore.recurrence_type && (
+            {chore.isRecurring && chore.recurrenceType && (
               <p className="text-xs text-muted-foreground mt-1">
-                {chore.recurrence_type === "daily" && `${chore.recurrence_count || 1}x daily`}
-                {chore.recurrence_type === "weekly" && `Every ${chore.recurrence_interval || 1} week${(chore.recurrence_interval || 1) > 1 ? 's' : ''}`}
-                {chore.recurrence_type === "monthly" && `Every ${chore.recurrence_interval || 1} month${(chore.recurrence_interval || 1) > 1 ? 's' : ''}`}
+                {chore.recurrenceType === "daily" && `${chore.recurrenceCount || 1}x daily`}
+                {chore.recurrenceType === "weekly" && `Every ${chore.recurrenceCount || 1} week${(chore.recurrenceCount || 1) > 1 ? 's' : ''}`}
+                {chore.recurrenceType === "monthly" && `Every ${chore.recurrenceCount || 1} month${(chore.recurrenceCount || 1) > 1 ? 's' : ''}`}
               </p>
             )}
           </div>
@@ -204,13 +197,13 @@ function ChoreCard({
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-black uppercase ${colorScheme.light} border-2 ${colorScheme.border} shadow-[2px_2px_0px_0px_var(--shadow-color)]`}>
             <Star className="h-3 w-3" />
-            {chore.point_value} pts
+            {chore.pointValue} pts
           </div>
           {assignees.length === 0 ? (
             <span className="text-xs text-muted-foreground">👤 Anyone</span>
           ) : assignees.length === 1 ? (
             <span className="text-xs font-bold text-muted-foreground">
-              {assignees[0].icon_emoji} {assignees[0].name}
+              {assignees[0].iconEmoji} {assignees[0].name}
             </span>
           ) : isIndividualChore ? (
             <Badge className="text-xs bg-primary/10 text-foreground border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] uppercase font-black">
@@ -219,7 +212,7 @@ function ChoreCard({
           ) : (
             <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground">
-                {assignees.map((a) => a.icon_emoji || "👤").join("")}
+                {assignees.map((a) => a.iconEmoji || "👤").join("")}
               </span>
               <span className="text-xs text-muted-foreground">
                 Group chore
@@ -232,18 +225,18 @@ function ChoreCard({
         {isIndividualChore && (
           <div className="mb-3 flex flex-wrap gap-1.5">
             {assignees.map((assignee) => {
-              const hasCompleted = completedByIds.includes(assignee.id);
+              const hasCompleted = completedByIds.includes(assignee._id);
               return (
                 <div
-                  key={assignee.id}
+                  key={assignee._id}
                   className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] ${
-                    hasCompleted 
-                      ? "bg-accent text-accent-foreground" 
+                    hasCompleted
+                      ? "bg-accent text-accent-foreground"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {hasCompleted && <CheckCircle2 className="h-3 w-3" />}
-                  {assignee.icon_emoji || "👤"} {assignee.name}
+                  {assignee.iconEmoji || "👤"} {assignee.name}
                 </div>
               );
             })}
@@ -317,12 +310,12 @@ function MemberSection({
   onToggleComplete: (chore: Chore) => void;
   onEdit: (chore: Chore) => void;
   onDelete: (chore: Chore) => void;
-  getDaysRemaining: (weekStart: string) => number | null;
+  getDaysRemaining: (weekStart: number) => number | null;
 }) {
   const completedCount = chores.filter(c => c.completed).length;
   const totalCount = chores.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-  const totalPoints = chores.filter(c => c.completed).reduce((sum, c) => sum + c.point_value, 0);
+  const totalPoints = chores.filter(c => c.completed).reduce((sum, c) => sum + c.pointValue, 0);
 
   return (
     <div className="mb-8">
@@ -331,7 +324,7 @@ function MemberSection({
         <div className={`${colorScheme.bg} border-b-2 border-border p-4`}>
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
-              <span className="text-4xl">{member?.icon_emoji || "📋"}</span>
+              <span className="text-4xl">{member?.iconEmoji || "📋"}</span>
               <div>
                 <h2 className="text-xl font-black uppercase tracking-tight">{member?.name || "Unassigned"}</h2>
                 <p className="text-sm font-bold opacity-80">
@@ -355,14 +348,14 @@ function MemberSection({
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {chores.map((chore) => (
           <ChoreCard
-            key={chore.id}
+            key={chore._id}
             chore={chore}
             familyMembers={familyMembers}
             colorScheme={colorScheme}
             onToggleComplete={onToggleComplete}
             onEdit={onEdit}
             onDelete={onDelete}
-            daysRemaining={getDaysRemaining(chore.week_start)}
+            daysRemaining={getDaysRemaining(chore.weekStart)}
           />
         ))}
       </div>
@@ -372,19 +365,22 @@ function MemberSection({
 
 function ChoresDashboardContent() {
   const { family } = useFamily();
-  const FAMILY_ID = family?.id;
+  const FAMILY_ID = family?._id;
 
-  const { chores, loading, error, refetch, createChore, updateChore, deleteChore, toggleComplete } = useChores(FAMILY_ID);
+  // Get current week start timestamp
+  const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 0 }).getTime();
+
+  const { chores, loading, error, refetch, createChore, updateChore, deleteChore, toggleComplete } = useChores(currentWeekStart);
   const { members: familyMembers } = useFamilyMembers(FAMILY_ID);
 
   const [choreDialogOpen, setChoreDialogOpen] = useState(false);
   const [editingChore, setEditingChore] = useState<Chore | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showCompleted, setShowCompleted] = useState(true);
-  const [selectedMember, setSelectedMember] = useState<number | "all">("all");
+  const [selectedMember, setSelectedMember] = useState<string | "all">("all");
 
-  const getDaysRemaining = (weekStart: string): number | null => {
-    const weekStartDate = parseISO(weekStart);
+  const getDaysRemaining = (weekStart: number): number | null => {
+    const weekStartDate = new Date(weekStart);
     const weekEndDate = addDays(weekStartDate, 6);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -392,14 +388,8 @@ function ChoresDashboardContent() {
   };
 
   // Helper to get assignee IDs from a chore
-  const getChoreAssigneeIds = (chore: Chore): number[] => {
-    if (chore.assigned_to_ids) {
-      return chore.assigned_to_ids.split(",").map(Number).filter(Boolean);
-    }
-    if (chore.assigned_to) {
-      return [chore.assigned_to];
-    }
-    return [];
+  const getChoreAssigneeIds = (chore: Chore): Id<"users">[] => {
+    return chore.assignedToIds || [];
   };
 
   const filteredChores = useMemo(() => {
@@ -408,7 +398,7 @@ function ChoresDashboardContent() {
     if (selectedMember !== "all") {
       filtered = filtered.filter((c) => {
         const assigneeIds = getChoreAssigneeIds(c);
-        return assigneeIds.includes(selectedMember);
+        return assigneeIds.includes(selectedMember as Id<"users">);
       });
     }
     return filtered;
@@ -416,20 +406,19 @@ function ChoresDashboardContent() {
 
   const choresByAssignee = useMemo(() => {
     const grouped: Record<string, Chore[]> = { unassigned: [] };
-    familyMembers.forEach((m) => { grouped[m.id.toString()] = []; });
-    
+    familyMembers.forEach((m) => { grouped[m._id] = []; });
+
     filteredChores.forEach((chore) => {
       const assigneeIds = getChoreAssigneeIds(chore);
-      
+
       if (assigneeIds.length === 0) {
         // No assignees - goes to unassigned
         grouped.unassigned.push(chore);
       } else {
         // Add to each assignee's group (chore appears under multiple people)
         assigneeIds.forEach((id) => {
-          const key = id.toString();
-          if (grouped[key]) {
-            grouped[key].push(chore);
+          if (grouped[id]) {
+            grouped[id].push(chore);
           }
         });
       }
@@ -440,26 +429,26 @@ function ChoresDashboardContent() {
   const stats = useMemo(() => {
     const total = chores.length;
     const completed = chores.filter((c) => c.completed).length;
-    const totalPoints = chores.filter((c) => c.completed).reduce((sum, c) => sum + c.point_value, 0);
+    const totalPoints = chores.filter((c) => c.completed).reduce((sum, c) => sum + c.pointValue, 0);
     const progress = total > 0 ? (completed / total) * 100 : 0;
     return { total, completed, totalPoints, progress };
   }, [chores]);
 
   const handleCreateChore = () => { setEditingChore(null); setChoreDialogOpen(true); };
   const handleEditChore = (chore: Chore) => { setEditingChore(chore); setChoreDialogOpen(true); };
-  const handleDeleteChore = async (chore: Chore) => { if (confirm(`Delete "${chore.title}"?`)) { await deleteChore(chore.id); refetch(); } };
-  const handleSaveChore = async (data: ChoreCreate | ChoreUpdate, choreId?: number) => {
+  const handleDeleteChore = async (chore: Chore) => { if (confirm(`Delete "${chore.title}"?`)) { await deleteChore(chore._id); refetch(); } };
+  const handleSaveChore = async (data: ChoreCreate | ChoreUpdate, choreId?: Id<"chores">) => {
     if (choreId !== undefined) await updateChore(choreId, data as ChoreUpdate);
     else await createChore(data as ChoreCreate);
     refetch();
   };
   const handleToggleComplete = async (chore: Chore) => {
     if (!chore.completed) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 2000); }
-    await toggleComplete(chore.id);
+    await toggleComplete(chore._id);
     refetch();
   };
 
-  const getMemberColor = (_: number | null, index: number) => MEMBER_COLORS[index % MEMBER_COLORS.length];
+  const getMemberColor = (_: string | null, index: number) => MEMBER_COLORS[index % MEMBER_COLORS.length];
 
   if (loading) {
     return (
@@ -570,12 +559,12 @@ function ChoresDashboardContent() {
           </Button>
           <select
             value={selectedMember}
-            onChange={(e) => setSelectedMember(e.target.value === "all" ? "all" : parseInt(e.target.value))}
+            onChange={(e) => setSelectedMember(e.target.value)}
             className="h-9 px-3 rounded-md border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] text-sm font-bold bg-card focus:outline-none focus:ring-0 focus:border-border"
           >
             <option value="all">👥 Everyone</option>
             {familyMembers.map((m) => (
-              <option key={m.id} value={m.id}>{m.icon_emoji || "👤"} {m.name}</option>
+              <option key={m._id} value={m._id}>{m.iconEmoji || "👤"} {m.name}</option>
             ))}
           </select>
         </div>
@@ -647,15 +636,15 @@ function ChoresDashboardContent() {
               />
             )}
             {familyMembers.map((member, index) => {
-              const memberChores = choresByAssignee[member.id.toString()] || [];
+              const memberChores = choresByAssignee[member._id] || [];
               if (memberChores.length === 0) return null;
               return (
                 <MemberSection
-                  key={member.id}
+                  key={member._id}
                   member={member}
                   chores={memberChores}
                   familyMembers={familyMembers}
-                  colorScheme={getMemberColor(member.id, index)}
+                  colorScheme={getMemberColor(member._id, index)}
                   onToggleComplete={handleToggleComplete}
                   onEdit={handleEditChore}
                   onDelete={handleDeleteChore}

@@ -12,9 +12,9 @@ import { useFamilies, Family } from "@/hooks/useFamilies";
 import { FamilyDialog } from "@/features/family/components/FamilyDialog";
 import { AddMemberDialog } from "@/features/family/components/AddMemberDialog";
 import { EditMemberDialog } from "@/features/family/components/EditMemberDialog";
-import { useFamilyMembers, useCreateFamilyMember, useUpdateFamilyMember, useDeleteFamilyMember } from "@/hooks/useFamilyMembers";
+import { useFamilyMembers, useCreateFamilyMember, useUpdateFamilyMember, useDeleteFamilyMember, FamilyMember } from "@/hooks/useFamilyMembers";
 import { useAuth } from "@/contexts/AuthContext";
-import { FamilyMember } from "@/types";
+import { Id } from "../../../convex/_generated/dataModel";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -22,7 +22,7 @@ function SettingsPageContent() {
   const { user: currentUser } = useAuth();
   const { family, loading: familyLoading, refetch: refetchFamily } = useFamily();
   const { createFamily, updateFamily, deleteFamily } = useFamilies();
-  const { members, loading: membersLoading, refetch: refetchMembers } = useFamilyMembers(family?.id);
+  const { members, loading: membersLoading, refetch: refetchMembers } = useFamilyMembers(family?._id);
   const { createMember, loading: creatingMember } = useCreateFamilyMember();
   const { updateMember, loading: updatingMember } = useUpdateFamilyMember();
   const { deleteMember, loading: deletingMember } = useDeleteFamilyMember();
@@ -58,7 +58,7 @@ function SettingsPageContent() {
       return;
     }
     
-    const success = await deleteFamily(fam.id);
+    const success = await deleteFamily(fam._id);
     if (success) {
       refetchFamily();
       alert("Family deleted successfully. You may need to log out and create a new family.");
@@ -67,11 +67,11 @@ function SettingsPageContent() {
     }
   };
 
-  const handleSaveFamily = async (data: { name: string; admin_password?: string }, familyId?: number) => {
+  const handleSaveFamily = async (data: { name: string; adminPin?: string }, familyId?: string) => {
     if (familyId) {
-      await updateFamily(familyId, data);
+      await updateFamily(familyId as Id<"families">, { name: data.name, adminPin: data.adminPin });
     } else {
-      await createFamily({ name: data.name, admin_password: data.admin_password || "" });
+      await createFamily({ name: data.name, adminPin: data.adminPin });
     }
     refetchFamily();
   };
@@ -90,7 +90,7 @@ function SettingsPageContent() {
   };
 
   const handleDeleteMember = async (member: FamilyMember) => {
-    if (member.id === currentUser?.id) {
+    if (member._id === currentUser?._id) {
       alert("You cannot delete yourself");
       return;
     }
@@ -109,7 +109,7 @@ function SettingsPageContent() {
     }
 
     try {
-      await deleteMember(member.id);
+      await deleteMember(member._id);
       refetchMembers();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete member");
@@ -121,10 +121,10 @@ function SettingsPageContent() {
     email?: string;
     password?: string;
     role: "parent" | "child";
-    family_id: number;
+    family_id?: string;
   }) => {
     try {
-      await createMember(data);
+      await createMember({ name: data.name, role: data.role });
       refetchMembers();
       setAddMemberDialogOpen(false);
     } catch (err) {
@@ -132,13 +132,13 @@ function SettingsPageContent() {
     }
   };
 
-  const handleUpdateMember = async (userId: number, data: {
+  const handleUpdateMember = async (userId: string, data: {
     name?: string;
-    profile_image_url?: string | null;
-    icon_emoji?: string | null;
+    profileImageUrl?: string | null;
+    iconEmoji?: string | null;
   }) => {
     try {
-      await updateMember(userId, data);
+      await updateMember(userId as Id<"users">, { name: data.name, iconEmoji: data.iconEmoji ?? undefined });
       refetchMembers();
       setEditMemberDialogOpen(false);
     } catch (err) {
@@ -172,7 +172,7 @@ function SettingsPageContent() {
                     <Badge variant="outline" className="shrink-0">Current Family</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Created {format(new Date(family.created_at), "MMMM d, yyyy")}
+                    Created {family.createdAt ? format(new Date(family.createdAt), "MMMM d, yyyy") : "recently"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -228,11 +228,11 @@ function SettingsPageContent() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {members.map((member) => (
-                <Card key={member.id} className="border">
+                <Card key={member._id} className="border">
                   <CardContent className="pt-4 space-y-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="size-10">
-                        <AvatarImage src={member.profile_image_url || undefined} alt={member.name} />
+                        <AvatarImage src={member.profileImageUrl || undefined} alt={member.name} />
                         <AvatarFallback>{member.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
@@ -302,20 +302,22 @@ function SettingsPageContent() {
         onSave={handleSaveFamily}
       />
 
-      <AddMemberDialog
-        open={addMemberDialogOpen}
-        onOpenChange={setAddMemberDialogOpen}
-        familyId={family?.id}
-        onSave={handleSaveMember}
-        isLoading={creatingMember}
-      />
+      {family && (
+        <AddMemberDialog
+          open={addMemberDialogOpen}
+          onOpenChange={setAddMemberDialogOpen}
+          familyId={family._id}
+          onSave={handleSaveMember}
+          loading={creatingMember}
+        />
+      )}
 
       <EditMemberDialog
         open={editMemberDialogOpen}
         onOpenChange={setEditMemberDialogOpen}
         member={editingMember}
         onSave={handleUpdateMember}
-        isLoading={updatingMember}
+        loading={updatingMember}
       />
     </div>
   );

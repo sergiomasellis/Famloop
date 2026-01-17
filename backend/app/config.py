@@ -46,6 +46,22 @@ class Settings(BaseSettings):
     rate_limit_requests: int = Field(default=100, description="Max requests per window")
     rate_limit_window: str = Field(default="1 minute", description="Rate limit window")
 
+    # OAuth
+    google_client_id: str | None = Field(
+        default=None, description="Google OAuth client ID"
+    )
+    google_client_secret: str | None = Field(
+        default=None, description="Google OAuth client secret"
+    )
+    google_redirect_uri: str | None = Field(
+        default=None,
+        description="Google OAuth redirect URI (backend) - defaults to local /api/auth/google/callback",
+    )
+    frontend_app_url: str | None = Field(
+        default=None,
+        description="Frontend base URL used for auth redirects (defaults to first CORS origin or localhost)",
+    )
+
     # Logging
     log_level: str = Field(default="INFO", description="Logging level")
     log_format: str = Field(default="json", description="Log format (json or text)")
@@ -135,6 +151,15 @@ class Settings(BaseSettings):
     def stripe_enabled(self) -> bool:
         """Check if Stripe is configured."""
         return bool(self.stripe_secret_key)
+
+    @property
+    def default_frontend_origin(self) -> str:
+        """Return the preferred frontend origin for redirects."""
+        if self.frontend_app_url:
+            return self.frontend_app_url.rstrip("/")
+        if self.cors_origins_list:
+            return self.cors_origins_list[0].rstrip("/")
+        return "http://localhost:3000"
 
     class Config:
         env_file = ".env"

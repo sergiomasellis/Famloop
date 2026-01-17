@@ -1,65 +1,44 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { apiFetch } from "@/lib/api";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 
 export type Family = {
-  id: number;
+  _id: Id<"families">;
   name: string;
-  created_at: string;
+  createdAt: number;
+  adminPin?: string;
 };
 
 export function useFamily() {
-  const [family, setFamily] = useState<Family | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const family = useQuery(api.families.getCurrentFamily);
+  const createFamilyMutation = useMutation(api.families.create);
 
-  const fetchFamily = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await apiFetch("/families/");
-      if (!res.ok) throw new Error("Failed to fetch families");
-      const families: Family[] = await res.json();
-      // Use the first family if available, or null if none exist
-      setFamily(families.length > 0 ? families[0] : null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loading = family === undefined;
+  const error = null; // Convex handles errors via the query state
 
-  const createFamily = useCallback(async (name: string, adminPassword: string): Promise<Family | null> => {
+  const createFamily = async (name: string, adminPin?: string): Promise<Family | null> => {
     try {
-      const res = await apiFetch("/families/", {
-        method: "POST",
-        body: JSON.stringify({ name, admin_password: adminPassword }),
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || "Failed to create family");
-      }
-      const newFamily: Family = await res.json();
-      setFamily(newFamily);
-      setError(null);
-      return newFamily;
+      const familyId = await createFamilyMutation({ name, adminPin });
+      // Return a minimal family object - the query will update automatically
+      return {
+        _id: familyId,
+        name,
+        createdAt: Date.now(),
+      };
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      console.error("Failed to create family:", err);
       return null;
     }
-  }, []);
-
-  useEffect(() => {
-    fetchFamily();
-  }, [fetchFamily]);
+  };
 
   return {
-    family,
+    family: family as Family | null,
     loading,
     error,
-    refetch: fetchFamily,
     createFamily,
+    // refetch is not needed with Convex - it's reactive
+    refetch: () => {},
   };
 }
-

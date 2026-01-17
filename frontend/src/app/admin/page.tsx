@@ -5,24 +5,24 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, CalendarPlus, Users, Plus, Pencil, Trash2, AlertCircle, UserPlus } from "lucide-react";
+import { Shield, CalendarPlus, Users, Plus, Pencil, AlertCircle, UserPlus, Trash2 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useFamily } from "@/hooks/useFamily";
-import { useFamilies, Family } from "@/hooks/useFamilies";
+import { useFamily, Family } from "@/hooks/useFamily";
+import { useFamilies } from "@/hooks/useFamilies";
 import { FamilyDialog } from "@/features/family/components/FamilyDialog";
 import { AddMemberDialog } from "@/features/family/components/AddMemberDialog";
 import { EditMemberDialog } from "@/features/family/components/EditMemberDialog";
-import { useFamilyMembers, useCreateFamilyMember, useUpdateFamilyMember, useDeleteFamilyMember } from "@/hooks/useFamilyMembers";
+import { useFamilyMembers, useCreateFamilyMember, useUpdateFamilyMember, useDeleteFamilyMember, FamilyMember } from "@/hooks/useFamilyMembers";
 import { useAuth } from "@/contexts/AuthContext";
-import { FamilyMember } from "@/types";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Id } from "../../../convex/_generated/dataModel";
 
 function SettingsPageContent() {
   const { user: currentUser } = useAuth();
   const { family, loading: familyLoading, refetch: refetchFamily } = useFamily();
   const { createFamily, updateFamily, deleteFamily } = useFamilies();
-  const { members, loading: membersLoading, refetch: refetchMembers } = useFamilyMembers(family?.id);
+  const { members, loading: membersLoading, refetch: refetchMembers } = useFamilyMembers(family?._id);
   const { createMember, loading: creatingMember } = useCreateFamilyMember();
   const { updateMember, loading: updatingMember } = useUpdateFamilyMember();
   const { deleteMember, loading: deletingMember } = useDeleteFamilyMember();
@@ -53,12 +53,12 @@ function SettingsPageContent() {
       `- All goals\n\n` +
       `This action CANNOT be undone!`
     );
-    
+
     if (!confirmed) {
       return;
     }
-    
-    const success = await deleteFamily(fam.id);
+
+    const success = await deleteFamily(fam._id);
     if (success) {
       refetchFamily();
       // Optionally redirect to home or show a message
@@ -68,11 +68,11 @@ function SettingsPageContent() {
     }
   };
 
-  const handleSaveFamily = async (data: { name: string; admin_password?: string }, familyId?: number) => {
+  const handleSaveFamily = async (data: { name: string; adminPin?: string }, familyId?: string) => {
     if (familyId) {
-      await updateFamily(familyId, data);
+      await updateFamily(familyId as Id<"families">, { name: data.name, adminPin: data.adminPin });
     } else {
-      await createFamily({ name: data.name, admin_password: data.admin_password || "" });
+      await createFamily({ name: data.name, adminPin: data.adminPin });
     }
     refetchFamily();
   };
@@ -91,7 +91,7 @@ function SettingsPageContent() {
   };
 
   const handleDeleteMember = async (member: FamilyMember) => {
-    if (member.id === currentUser?.id) {
+    if (member._id === currentUser?._id) {
       alert("You cannot delete yourself");
       return;
     }
@@ -110,11 +110,16 @@ function SettingsPageContent() {
     }
 
     try {
-      await deleteMember(member.id);
+      await deleteMember(member._id);
       refetchMembers();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete member");
     }
+  };
+
+  const handleGoogleConnect = () => {
+    // Google OAuth is handled by Clerk - redirect to Clerk's OAuth flow
+    alert("Google Calendar integration is coming soon. For now, use Clerk's Google sign-in.");
   };
 
   const handleSaveMember = async (data: {
@@ -122,10 +127,14 @@ function SettingsPageContent() {
     email?: string;
     password?: string;
     role: "parent" | "child";
-    family_id: number;
+    family_id?: string;
   }) => {
     try {
-      await createMember(data);
+      // Convex createMember expects { name, role, iconEmoji? }
+      await createMember({
+        name: data.name,
+        role: data.role,
+      });
       refetchMembers();
       setAddMemberDialogOpen(false);
     } catch (err) {
@@ -133,13 +142,16 @@ function SettingsPageContent() {
     }
   };
 
-  const handleUpdateMember = async (userId: number, data: {
+  const handleUpdateMember = async (userId: string, data: {
     name?: string;
-    profile_image_url?: string | null;
-    icon_emoji?: string | null;
+    profileImageUrl?: string | null;
+    iconEmoji?: string | null;
   }) => {
     try {
-      await updateMember(userId, data);
+      await updateMember(userId as Id<"users">, {
+        name: data.name,
+        iconEmoji: data.iconEmoji ?? undefined,
+      });
       refetchMembers();
       setEditMemberDialogOpen(false);
     } catch (err) {
@@ -174,7 +186,7 @@ function SettingsPageContent() {
                     <Badge variant="outline" className="shrink-0">Current Family</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Created {format(new Date(family.created_at), "MMMM d, yyyy")}
+                    Created {format(new Date(family.createdAt), "MMMM d, yyyy")}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -246,20 +258,20 @@ function SettingsPageContent() {
               <div className="space-y-3">
                 {members.map((member) => (
                   <div
-                    key={member.id}
+                    key={member._id}
                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <Avatar className="h-10 w-10 shrink-0">
-                        <AvatarImage src={member.profile_image_url || undefined} alt={member.name} />
+                        <AvatarImage src={member.profileImageUrl || undefined} alt={member.name} />
                         <AvatarFallback>
-                          {member.icon_emoji || member.name.charAt(0).toUpperCase()}
+                          {member.iconEmoji || member.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="font-semibold break-words">{member.name}</h3>
-                          {member.id === currentUser?.id && (
+                          {member._id === currentUser?._id && (
                             <Badge variant="outline" className="text-xs shrink-0">You</Badge>
                           )}
                           <Badge
@@ -272,9 +284,6 @@ function SettingsPageContent() {
                         {member.email && (
                           <p className="text-sm text-muted-foreground truncate">{member.email}</p>
                         )}
-                        <p className="text-xs text-muted-foreground">
-                          Joined {format(new Date(member.created_at), "MMMM d, yyyy")}
-                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 sm:ml-4">
@@ -287,7 +296,7 @@ function SettingsPageContent() {
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
                       </Button>
-                      {member.id !== currentUser?.id && (
+                      {member._id !== currentUser?._id && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -318,10 +327,10 @@ function SettingsPageContent() {
           </CardHeader>
           <CardContent className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Manage roles and master admin password.
+              Manage roles and parent PIN for secure access.
             </p>
             <Button variant="outline" asChild className="w-full sm:w-auto">
-              <Link href="#">Set Master Password</Link>
+              <Link href="#">Change Parent PIN</Link>
             </Button>
           </CardContent>
         </Card>
@@ -334,8 +343,8 @@ function SettingsPageContent() {
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-              <Button asChild className="w-full sm:w-auto">
-                <Link href="#">Connect Google</Link>
+              <Button onClick={handleGoogleConnect} className="w-full sm:w-auto">
+                Connect Google
               </Button>
               <Button variant="secondary" asChild className="w-full sm:w-auto">
                 <Link href="#">Add iCal</Link>
@@ -361,7 +370,7 @@ function SettingsPageContent() {
         <AddMemberDialog
           open={addMemberDialogOpen}
           onOpenChange={setAddMemberDialogOpen}
-          familyId={family.id}
+          familyId={family._id}
           onSave={handleSaveMember}
           loading={creatingMember}
         />

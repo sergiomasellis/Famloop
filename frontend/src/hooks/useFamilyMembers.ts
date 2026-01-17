@@ -1,83 +1,75 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { FamilyMember } from "@/types";
-import { apiFetch } from "@/lib/api";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
+import { useState, useCallback } from "react";
 
-export function useFamilyMembers(familyId?: number) {
-  const [members, setMembers] = useState<FamilyMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// Type matching Convex user schema
+export type FamilyMember = {
+  _id: Id<"users">;
+  clerkId: string;
+  name: string;
+  email?: string;
+  role: "parent" | "child";
+  familyId?: Id<"families">;
+  profileImageUrl?: string;
+  iconEmoji?: string;
+};
 
-  const fetchMembers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await apiFetch("/users/");
-      if (!res.ok) throw new Error("Failed to fetch users");
-      const data: FamilyMember[] = await res.json();
-      // Filter by family_id if provided
-      const filtered = familyId
-        ? data.filter((m) => m.family_id === familyId)
-        : data;
-      setMembers(filtered);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  }, [familyId]);
+export function useFamilyMembers(familyId?: Id<"families">) {
+  // Use getCurrentFamilyMembers which automatically uses the authenticated user's family
+  const members = useQuery(
+    api.families.getCurrentFamilyMembers,
+    familyId ? {} : "skip"
+  );
 
-  useEffect(() => {
-    fetchMembers();
-  }, [fetchMembers]);
+  const loading = members === undefined;
+  const error = null;
 
   return {
-    members,
+    members: (members || []) as FamilyMember[],
     loading,
     error,
-    refetch: fetchMembers,
+    // refetch is not needed with Convex - it's reactive
+    refetch: () => {},
   };
 }
 
 export function useCreateFamilyMember() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const addMemberMutation = useMutation(api.families.addMember);
 
   const createMember = useCallback(async (data: {
     name: string;
-    email?: string;
-    password?: string;
     role: "parent" | "child";
-    family_id: number;
-  }) => {
+    iconEmoji?: string;
+  }): Promise<FamilyMember | null> => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch("/users/", {
-        method: "POST",
-        body: JSON.stringify(data),
+      const memberId = await addMemberMutation({
+        name: data.name,
+        role: data.role,
+        iconEmoji: data.iconEmoji,
       });
-      if (!res.ok) {
-        let errorMessage = "Failed to create member";
-        try {
-          const errorData = await res.json();
-          errorMessage = errorData.detail || errorMessage;
-        } catch {
-          // If response is not JSON, use status text
-          errorMessage = res.statusText || errorMessage;
-        }
-        throw new Error(errorMessage);
-      }
-      const newMember: FamilyMember = await res.json();
-      return newMember;
+      // Return a minimal member object - the query will update automatically
+      return {
+        _id: memberId,
+        clerkId: `local_${Date.now()}`,
+        name: data.name,
+        role: data.role,
+        iconEmoji: data.iconEmoji,
+      };
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      throw err;
+      const errorMessage = err instanceof Error ? err.message : "Failed to create member";
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [addMemberMutation]);
 
   return {
     createMember,
@@ -89,32 +81,35 @@ export function useCreateFamilyMember() {
 export function useUpdateFamilyMember() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const updateProfileMutation = useMutation(api.users.updateProfile);
 
-  const updateMember = useCallback(async (userId: number, data: {
+  const updateMember = useCallback(async (userId: Id<"users">, data: {
     name?: string;
-    profile_image_url?: string | null;
-    icon_emoji?: string | null;
-  }) => {
+    iconEmoji?: string;
+  }): Promise<FamilyMember | null> => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch(`/users/${userId}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
+      await updateProfileMutation({
+        name: data.name,
+        iconEmoji: data.iconEmoji,
       });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.detail || "Failed to update member");
-      }
-      const updatedMember: FamilyMember = await res.json();
-      return updatedMember;
+      // Return a minimal member object - the query will update automatically
+      return {
+        _id: userId,
+        clerkId: "",
+        name: data.name || "",
+        role: "child",
+        iconEmoji: data.iconEmoji,
+      };
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      throw err;
+      const errorMessage = err instanceof Error ? err.message : "Failed to update member";
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [updateProfileMutation]);
 
   return {
     updateMember,
@@ -126,26 +121,22 @@ export function useUpdateFamilyMember() {
 export function useDeleteFamilyMember() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const removeMemberMutation = useMutation(api.families.removeMember);
 
-  const deleteMember = useCallback(async (userId: number) => {
+  const deleteMember = useCallback(async (userId: Id<"users">): Promise<boolean> => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch(`/users/${userId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.detail || "Failed to delete member");
-      }
+      await removeMemberMutation({ userId });
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      throw err;
+      const errorMessage = err instanceof Error ? err.message : "Failed to delete member";
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [removeMemberMutation]);
 
   return {
     deleteMember,

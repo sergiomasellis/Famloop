@@ -1,3 +1,8 @@
+export type EventParticipant = {
+  id: string;
+  name: string;
+};
+
 export type EventItem = {
   id: string;
   title: string;
@@ -5,7 +10,7 @@ export type EventItem = {
   description?: string;
   start: Date;
   end: Date;
-  participants: string[];
+  participants?: EventParticipant[];
 };
 
 // API-aligned Event type (from backend)
@@ -127,16 +132,34 @@ export type ChoreUpdate = {
   max_completions?: number | null;
 };
 
-// Family member type for assignment
+// Family type (Convex-compatible)
+export type Family = {
+  _id: string;
+  name: string;
+  createdAt: number;
+  adminPasswordHash?: string;
+  // Legacy aliases for backwards compatibility
+  id?: number;
+  created_at?: string;
+};
+
+// Family member type for assignment (Convex-compatible)
 export type FamilyMember = {
-  id: number;
+  _id: string;
+  clerkId?: string;
   name: string;
   email?: string | null;
   role: "parent" | "child";
+  profileImageUrl?: string | null;
+  iconEmoji?: string | null;
+  familyId?: string | null;
+  createdAt?: number;
+  // Legacy aliases for backwards compatibility
+  id?: number;
   profile_image_url?: string | null;
   icon_emoji?: string | null;
   family_id?: number | null;
-  created_at: string;
+  created_at?: string;
 };
 
 export type CalendarView = "week" | "day" | "month" | "task";

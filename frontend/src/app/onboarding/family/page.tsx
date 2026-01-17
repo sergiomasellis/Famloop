@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useFamily } from "@/hooks/useFamily";
 import { useFamilies } from "@/hooks/useFamilies";
-import { Users, Lock, ArrowRight, Sparkles } from "lucide-react";
+import { Users, KeyRound, ArrowRight, Sparkles } from "lucide-react";
 
 function CreateFamilyContent() {
   const router = useRouter();
@@ -17,9 +17,11 @@ function CreateFamilyContent() {
   const { createFamily, loading: creatingFamily, error: createFamilyError } = useFamilies();
 
   const [name, setName] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const pinInputRef = useRef<HTMLInputElement>(null);
+  const confirmPinInputRef = useRef<HTMLInputElement>(null);
 
   // If a family already exists, move the user to the pricing/subscription step
   useEffect(() => {
@@ -33,6 +35,12 @@ function CreateFamilyContent() {
     [formError, createFamilyError, familyError]
   );
 
+  // Handle PIN input - only allow digits and limit to 6
+  const handlePinChange = (value: string, setter: (v: string) => void) => {
+    const digitsOnly = value.replace(/\D/g, "").slice(0, 6);
+    setter(digitsOnly);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -42,19 +50,19 @@ function CreateFamilyContent() {
       return;
     }
 
-    if (!adminPassword || adminPassword.length < 6) {
-      setFormError("Admin password must be at least 6 characters");
+    if (!pin || pin.length < 4) {
+      setFormError("PIN must be at least 4 digits");
       return;
     }
 
-    if (adminPassword !== confirmPassword) {
-      setFormError("Passwords do not match");
+    if (pin !== confirmPin) {
+      setFormError("PINs do not match");
       return;
     }
 
     const created = await createFamily({
       name: name.trim(),
-      admin_password: adminPassword,
+      adminPin: pin,
     });
 
     if (created) {
@@ -80,7 +88,7 @@ function CreateFamilyContent() {
           </div>
           <h1 className="text-3xl font-black uppercase tracking-tight">Create your family</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Name your household and set an admin password. You&apos;ll add members next and then pick the plan that fits.
+            Name your household and create a parent PIN. You&apos;ll add members next and then pick the plan that fits.
           </p>
         </div>
 
@@ -110,35 +118,46 @@ function CreateFamilyContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold flex items-center gap-2" htmlFor="admin-password">
-                    <Lock className="h-4 w-4" />
-                    Admin password
+                  <label className="text-sm font-semibold flex items-center gap-2" htmlFor="admin-pin">
+                    <KeyRound className="h-4 w-4" />
+                    Parent PIN
                   </label>
                   <Input
-                    id="admin-password"
-                    type="password"
-                    placeholder="At least 6 characters"
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
+                    ref={pinInputRef}
+                    id="admin-pin"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="4-6 digit PIN"
+                    value={pin}
+                    onChange={(e) => handlePinChange(e.target.value, setPin)}
                     required
-                    minLength={6}
+                    maxLength={6}
                     disabled={creatingFamily}
+                    className="font-mono text-lg tracking-[0.5em] text-center"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    This PIN protects parent-only features like settings and approvals.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold" htmlFor="confirm-password">
-                    Confirm password
+                  <label className="text-sm font-semibold" htmlFor="confirm-pin">
+                    Confirm PIN
                   </label>
                   <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="Re-enter admin password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    ref={confirmPinInputRef}
+                    id="confirm-pin"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="Re-enter PIN"
+                    value={confirmPin}
+                    onChange={(e) => handlePinChange(e.target.value, setConfirmPin)}
                     required
-                    minLength={6}
+                    maxLength={6}
                     disabled={creatingFamily}
+                    className="font-mono text-lg tracking-[0.5em] text-center"
                   />
                 </div>
 
@@ -175,7 +194,7 @@ function CreateFamilyContent() {
                   Create family (current step)
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Set your household name and secure it with an admin password.
+                  Set your household name and create a parent PIN to secure settings.
                 </p>
               </div>
               <div className="rounded-lg border p-3">
@@ -215,5 +234,3 @@ export default function CreateFamilyPage() {
     </ProtectedRoute>
   );
 }
-
-

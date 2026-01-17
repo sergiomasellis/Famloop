@@ -249,17 +249,3 @@ class PasswordResetToken(Base):
     user: Mapped["User"] = relationship("User")
 
 
-class QRCodeSession(Base):
-    __tablename__ = "qr_code_sessions"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    session_token: Mapped[str] = mapped_column(
-        String, unique=True, nullable=False, index=True
-    )
-    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    scanned: Mapped[bool] = mapped_column(Boolean, default=False)
-    scanned_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    user: Mapped["User"] = relationship("User")

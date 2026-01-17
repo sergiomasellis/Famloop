@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { FamilyMember } from "@/types";
+import { FamilyMember } from "@/hooks/useFamilyMembers";
 import { cn } from "@/lib/utils";
 
 type ParticipantSelectorProps = {
@@ -83,7 +83,7 @@ export function ParticipantSelector({
                     variant="secondary"
                     className="flex items-center gap-1 pr-1"
                   >
-                    {member?.icon_emoji || getInitials(name)}
+                    {member?.iconEmoji || getInitials(name)}
                     <span className="truncate max-w-[80px]">{name}</span>
                   <span
                     role="button"
@@ -128,7 +128,7 @@ export function ParticipantSelector({
                 const isSelected = selectedNames.includes(member.name);
                 return (
                   <button
-                    key={member.id}
+                    key={member._id}
                     type="button"
                     onClick={() => toggleMember(member.name)}
                     className={cn(
@@ -146,11 +146,11 @@ export function ParticipantSelector({
                     </div>
                     <Avatar className="size-6">
                       <AvatarImage
-                        src={member.profile_image_url || undefined}
+                        src={member.profileImageUrl || undefined}
                         alt={member.name}
                       />
                       <AvatarFallback className="text-[10px]">
-                        {member.icon_emoji || getInitials(member.name)}
+                        {member.iconEmoji || getInitials(member.name)}
                       </AvatarFallback>
                     </Avatar>
                     <span className="flex-1 text-left truncate">{member.name}</span>

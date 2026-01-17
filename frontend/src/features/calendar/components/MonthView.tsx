@@ -1,7 +1,8 @@
 "use client";
 
 import { format } from "date-fns";
-import { EventItem, Chore } from "@/types";
+import { EventItem } from "@/types";
+import { Chore } from "@/hooks/useChores";
 import { dayKey, addDays } from "@/lib/date";
 import { CheckCircle2 } from "lucide-react";
 import { isChoreOnDay } from "@/lib/chore-utils";
@@ -95,13 +96,13 @@ export function MonthView({ monthGrid, events, chores = [], onEventClick, onChor
                 {/* Chores first */}
                 {dayChores.slice(0, 2).map((chore) => (
                   <div
-                    key={`chore-${chore.id}`}
+                    key={`chore-${chore._id}`}
                     className={`truncate rounded-md px-2 py-1 text-[10px] font-bold border cursor-pointer transition flex items-center gap-1 shadow-[1px_1px_0px_0px_var(--shadow-color)] ${
-                      chore.completed 
-                        ? "bg-green-100 border-green-700 text-green-900 line-through opacity-60" 
+                      chore.completed
+                        ? "bg-green-100 border-green-700 text-green-900 line-through opacity-60"
                         : "bg-violet-100 border-violet-700 text-violet-900 hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[2px_2px_0px_0px_var(--shadow-color)]"
                     }`}
-                    title={`${chore.title} • ${chore.point_value} pts`}
+                    title={`${chore.title} • ${chore.pointValue} pts`}
                     onClick={() => onChoreClick?.(chore)}
                   >
                     {chore.completed && <CheckCircle2 className="h-3 w-3 shrink-0" />}

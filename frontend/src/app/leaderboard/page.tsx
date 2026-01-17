@@ -1,27 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Trophy, ChevronDown, ChevronUp } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
-import { format } from "date-fns";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 function LeaderboardPageContent() {
   const { leaderboard, loading, error } = useLeaderboard();
-  const [expandedUsers, setExpandedUsers] = useState<Set<number>>(new Set());
-
-  const toggleUser = (userId: number) => {
-    setExpandedUsers((prev) => {
-      const next = new Set(prev);
-      if (next.has(userId)) {
-        next.delete(userId);
-      } else {
-        next.add(userId);
-      }
-      return next;
-    });
-  };
 
   if (loading) {
     return (
@@ -72,80 +58,53 @@ function LeaderboardPageContent() {
             </div>
           ) : (
             leaderboard.map((entry, i) => {
-              const isExpanded = expandedUsers.has(entry.user_id);
+              const rankBgColor =
+                i === 0
+                  ? "bg-yellow-400 border-yellow-600"
+                  : i === 1
+                    ? "bg-gray-300 border-gray-500"
+                    : i === 2
+                      ? "bg-amber-600 border-amber-800"
+                      : "bg-secondary border-border";
+
               return (
                 <div
-                  key={entry.user_id}
-                  className="rounded-md border-2 border-border bg-card shadow-sm overflow-hidden"
+                  key={entry.user._id}
+                  className="rounded-md border-2 border-border bg-card shadow-[2px_2px_0px_0px_var(--shadow-color)] overflow-hidden hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all"
                 >
-                  <div
-                    className="flex items-center justify-between p-3 hover:translate-x-1 hover:shadow-md transition-all cursor-pointer"
-                    onClick={() => toggleUser(entry.user_id)}
-                  >
+                  <div className="flex items-center justify-between p-3">
                     <div className="flex items-center gap-3 flex-1">
-                      <div className="size-8 rounded-full bg-secondary text-secondary-foreground border-2 border-border grid place-items-center font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] shrink-0">
+                      <div
+                        className={`size-8 rounded-full text-foreground border-2 grid place-items-center font-bold shadow-[2px_2px_0px_0px_var(--shadow-color)] shrink-0 ${rankBgColor}`}
+                      >
                         {i + 1}
                       </div>
                       <div className="flex items-center gap-2">
-                        {entry.icon_emoji && (
-                          <span className="text-xl">{entry.icon_emoji}</span>
-                        )}
-                        <div className="font-bold text-lg">{entry.name}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm font-bold bg-primary text-primary-foreground px-2 py-1 rounded border-2 border-border shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                        {entry.total_points} pts
-                      </div>
-                      {entry.completed_chores.length > 0 && (
-                        <button
-                          className="p-1 hover:bg-secondary rounded transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleUser(entry.user_id);
-                          }}
-                        >
-                          {isExpanded ? (
-                            <ChevronUp className="size-4" />
-                          ) : (
-                            <ChevronDown className="size-4" />
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {isExpanded && entry.completed_chores.length > 0 && (
-                    <div className="border-t-2 border-border bg-muted/30">
-                      <div className="p-4">
-                        <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">
-                          Completed Chores ({entry.completed_chores.length})
-                        </h3>
-                        <div className="space-y-2">
-                          {entry.completed_chores.map((chore) => (
-                            <div
-                              key={chore.id}
-                              className="flex items-center justify-between p-2 rounded-md bg-background border border-border"
-                            >
-                              <div className="flex items-center gap-2">
-                                {chore.emoji && (
-                                  <span className="text-lg">{chore.emoji}</span>
-                                )}
-                                <span className="font-medium">{chore.title}</span>
-                              </div>
-                              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                                <span>
-                                  {format(new Date(chore.awarded_at), "MMM d, h:mm a")}
-                                </span>
-                                <span className="font-bold text-primary">
-                                  +{chore.point_value} pts
-                                </span>
-                              </div>
-                            </div>
-                          ))}
+                        <Avatar className="size-8 border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)]">
+                          <AvatarImage src={entry.user.profileImageUrl} alt={entry.user.name} />
+                          <AvatarFallback className="text-sm font-bold">
+                            {entry.user.iconEmoji || entry.user.name.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-bold text-lg">{entry.user.name}</div>
+                          <div className="text-xs text-muted-foreground capitalize">
+                            {entry.user.role}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-bold bg-primary text-primary-foreground px-2 py-1 rounded border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)]">
+                        {entry.totalPoints} pts
+                      </div>
+                      {entry.weeklyPoints !== undefined && (
+                        <div className="text-xs text-muted-foreground">
+                          +{entry.weeklyPoints} this week
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             })

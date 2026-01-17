@@ -31,7 +31,10 @@ import {
 } from "lucide-react";
 
 // Types
-import { EventItem, Chore, ChoreCreate, ChoreUpdate, HoverPreview as HoverPreviewType, FamilyMember, DragState } from "@/types";
+import { EventItem, HoverPreview as HoverPreviewType, DragState } from "@/types";
+import { Chore, ChoreCreate, ChoreUpdate } from "@/hooks/useChores";
+import { FamilyMember } from "@/hooks/useFamilyMembers";
+import { Id } from "../../../convex/_generated/dataModel";
 
 // Utilities
 import { addDays, dayKey, minutesFromMidnight } from "@/lib/date";
@@ -89,7 +92,7 @@ function DashboardPageContent() {
 
   // Family management - fetch or create family (needed before events)
   const { family, createFamily, refetch: refetchFamily } = useFamily();
-  const FAMILY_ID = family?.id;
+  const FAMILY_ID = family?._id;
 
   // Commit drag ref - will be set after useEvents is called
   const commitDragRef = useRef<((drag: NonNullable<DragState>) => Promise<void>) | null>(null);
@@ -129,7 +132,8 @@ function DashboardPageContent() {
   // Event editor state
   const editor = useEventEditor();
 
-  // Chores management
+  // Chores management - pass weekStart timestamp
+  const weekStartTimestamp = weekStart.getTime();
   const {
     chores: apiChores,
     loading: choresLoading,
@@ -137,9 +141,9 @@ function DashboardPageContent() {
     updateChore,
     deleteChore: removeChore,
     toggleComplete,
-  } = useChores(FAMILY_ID);
+  } = useChores(weekStartTimestamp);
 
-  // Family members for assignment
+  // Family members for assignment - uses authenticated user's family automatically
   const { members: familyMembers } = useFamilyMembers(FAMILY_ID);
 
   // Chore dialog state
@@ -196,7 +200,7 @@ function DashboardPageContent() {
   // Chore handlers
   const handleSaveChore = async (
     data: ChoreCreate | ChoreUpdate,
-    choreId?: number
+    choreId?: Id<"chores">
   ) => {
     if (choreId !== undefined) {
       await updateChore(choreId, data as ChoreUpdate);
@@ -212,12 +216,12 @@ function DashboardPageContent() {
 
   const handleDeleteChore = async (chore: Chore) => {
     if (confirm(`Are you sure you want to delete "${chore.title}"?`)) {
-      await removeChore(chore.id);
+      await removeChore(chore._id);
     }
   };
 
   const handleToggleComplete = async (chore: Chore) => {
-    await toggleComplete(chore.id);
+    await toggleComplete(chore._id);
   };
 
   const handleOpenNewChore = () => {
@@ -258,13 +262,22 @@ function DashboardPageContent() {
         endDateTime.setTime(startDateTime.getTime() + 30 * 60 * 1000);
       }
 
+      // Convert participant names to EventParticipant objects
+      const participantObjects = draftParticipants
+        .map((name) => {
+          const member = familyMembers.find((m) => m.name === name);
+          if (!member) return null;
+          return { id: member._id as string, name: member.name };
+        })
+        .filter((p): p is { id: string; name: string } => p !== null);
+
       const result = await addEvent({
         title: draftTitle || "Untitled",
         emoji: "📌",
         description: draftLocation || undefined,
         start: startDateTime,
         end: endDateTime,
-        participants: draftParticipants,
+        participants: participantObjects,
       });
 
       if (result) {
@@ -318,15 +331,29 @@ function DashboardPageContent() {
     editor.setStartTime(format(e.start, "HH:mm"));
     editor.setEndTime(format(e.end, "HH:mm"));
     editor.setLocation(e.description ?? "");
-    editor.setParticipants(e.participants);
+    // Convert EventParticipant[] to string[] (names)
+    editor.setParticipants((e.participants || []).map((p) => p.name));
   }
 
   async function saveEdit() {
     const updates = editor.getUpdatedEvent();
     if (!updates || !editor.editingId) return;
 
+    // Convert participant names to EventParticipant[]
+    const participantNames = editor.getParticipantNames();
+    const participantObjects = participantNames
+      .map((name) => {
+        const member = familyMembers.find((m) => m.name === name);
+        if (!member) return null;
+        return { id: member._id as string, name: member.name };
+      })
+      .filter((p): p is { id: string; name: string } => p !== null);
+
     const eventId = editor.getEventIdFromSliceKey(editor.editingId);
-    const result = await updateEvent(eventId, updates);
+    const result = await updateEvent(eventId, {
+      ...updates,
+      participants: participantObjects,
+    });
     if (result) {
       editor.closeEditor();
     }
@@ -478,26 +505,21 @@ function DashboardPageContent() {
             </div>
             {e.description ? <div className="desc">{e.description}</div> : null}
             <div className="mt-2 flex -space-x-2 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:ring-background *:data-[slot=avatar]:grayscale">
-              {e.participants.map((p, i) => {
-                const avatarSrcMap: Record<string, string> = {
-                  Maggie: "",
-                  Max: "",
-                  Mom: "",
-                  Papa: "https://github.com/sergiomasellis.png",
-                  Sam: "",
-                };
-                const src = avatarSrcMap[p];
-                const initials = p
+              {(e.participants || []).map((p, i) => {
+                // Find the family member to get their profile image
+                const member = familyMembers.find((m) => m._id === p.id);
+                const src = member?.profileImageUrl || "";
+                const initials = p.name
                   .split(" ")
                   .map((s) => s[0])
                   .join("")
                   .slice(0, 2)
                   .toUpperCase() || "?";
                 return (
-                  <Avatar key={`${p}-${i}`} className="size-6">
+                  <Avatar key={`${p.id}-${i}`} className="size-6">
                     <AvatarImage
                       src={src}
-                      alt={p}
+                      alt={p.name}
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).src = "";
                       }}
@@ -1043,7 +1065,7 @@ function DashboardPageContent() {
                               <div key={`chores-${d.key}`} className="space-y-1 min-h-[24px] min-w-[80px]">
                                 {dayChores.slice(0, 3).map((chore) => (
                                   <div
-                                    key={`wk-chore-${chore.id}`}
+                                    key={`wk-chore-${chore._id}`}
                                     onClick={() => handleChoreClick(chore)}
                                     className={`truncate rounded px-1.5 py-0.5 text-[9px] sm:text-[10px] cursor-pointer transition flex items-center gap-1 touch-manipulation ${
                                       chore.completed
@@ -1133,7 +1155,7 @@ function DashboardPageContent() {
                         <div className="flex flex-wrap gap-2">
                           {dayChores.map((chore) => (
                             <div
-                              key={`day-chore-${chore.id}`}
+                              key={`day-chore-${chore._id}`}
                               onClick={() => handleChoreClick(chore)}
                               className={`rounded-lg px-3 py-2 text-sm cursor-pointer transition flex items-center gap-2 ${
                                 chore.completed
@@ -1145,7 +1167,7 @@ function DashboardPageContent() {
                               <span className="text-lg">{chore.emoji || "📋"}</span>
                               <div>
                                 <div className="font-medium">{chore.title}</div>
-                                <div className="text-xs opacity-70">{chore.point_value} pts</div>
+                                <div className="text-xs opacity-70">{chore.pointValue} pts</div>
                               </div>
                             </div>
                           ))}
@@ -1228,7 +1250,7 @@ function DashboardPageContent() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {apiChores.map((c, idx) => (
                     <ChoreCard
-                      key={c.id}
+                      key={c._id}
                       chore={c}
                       familyMembers={familyMembers}
                       colorClass={EVENT_COLORS[idx % EVENT_COLORS.length]}

@@ -10,9 +10,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Chore, ChoreItem, FamilyMember } from "@/types";
+import { ChoreItem } from "@/types";
+import { Chore } from "@/hooks/useChores";
+import { FamilyMember } from "@/hooks/useFamilyMembers";
 import { Check, MoreVertical, Pencil, Trash2, Undo, Repeat } from "lucide-react";
-import { useChoreCompletions } from "@/hooks/useChoreCompletions";
 
 // Legacy ChoreCard for demo data (backwards compatible)
 type LegacyChoreCardProps = {
@@ -65,34 +66,33 @@ export function ChoreCard({
   onDelete,
   onToggleComplete,
 }: ChoreCardProps) {
-  const assignee = familyMembers.find((m) => m.id === chore.assigned_to);
+  // Find assignee(s) - support both single and multiple assignees
+  const assigneeIds = chore.assignedToIds || [];
+  const assignee = assigneeIds.length > 0
+    ? familyMembers.find((m) => assigneeIds.includes(m._id))
+    : undefined;
   const assigneeName = assignee?.name || "Unassigned";
-  const assigneeEmoji = assignee?.icon_emoji || "";
-  
-  // Fetch completion count for recurring chores
-  const { completionCount, refetch: refetchCompletions } = useChoreCompletions(
-    chore.is_recurring ? chore.id : undefined
-  );
+  const assigneeEmoji = assignee?.iconEmoji || "";
+
+  // Use completion count from the chore object (provided by Convex query)
+  const completionCount = chore.completionCount ?? 0;
 
   // Check if max completions reached
-  const maxCompletions = chore.max_completions ?? null;
+  const maxCompletions = chore.maxCompletions ?? null;
   const isMaxReached = maxCompletions !== null && completionCount >= maxCompletions;
-  const canComplete = !isMaxReached || !chore.is_recurring;
+  const canComplete = !isMaxReached || !chore.isRecurring;
 
-  // Wrap the toggle complete to refresh completions after action
+  // Wrap the toggle complete handler
   const handleToggleComplete = async (c: Chore) => {
-    if (c.is_recurring && isMaxReached) {
+    if (c.isRecurring && isMaxReached) {
       return; // Don't allow completion if max reached
     }
     await onToggleComplete(c);
-    if (c.is_recurring) {
-      // Give backend a moment to save, then refetch
-      setTimeout(() => refetchCompletions(), 100);
-    }
+    // Convex will automatically update the chore through reactive queries
   };
 
   // Determine if card should be faded (completed)
-  const isFaded = chore.completed || (chore.is_recurring && isMaxReached);
+  const isFaded = chore.completed || (chore.isRecurring && isMaxReached);
 
   return (
     <Card
@@ -109,7 +109,7 @@ export function ChoreCard({
           >
             <span className="text-xl">{chore.emoji || "📋"}</span>
             {chore.title}
-            {chore.is_recurring && (
+            {chore.isRecurring && (
               <Badge 
                 variant="outline" 
                 className={`ml-2 font-bold text-xs border-2 border-border ${
@@ -139,7 +139,7 @@ export function ChoreCard({
                 className={`font-bold focus:bg-foreground focus:text-background ${!canComplete ? "opacity-50 cursor-not-allowed" : ""}`}
                 disabled={!canComplete}
               >
-                {chore.is_recurring ? (
+                {chore.isRecurring ? (
                   isMaxReached ? (
                     <>
                       <Check className="mr-2 h-4 w-4" />
@@ -188,14 +188,14 @@ export function ChoreCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="text-xs font-bold bg-foreground text-background px-2 py-1 rounded-md shadow-[1px_1px_0px_0px_rgba(255,255,255,0.5)] dark:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.5)]">
-              {chore.point_value} pts
+              {chore.pointValue} pts
             </div>
             <div className="text-xs font-bold flex items-center gap-1 bg-white/80 dark:bg-black/40 px-2 py-1 rounded-md border border-border">
               {assigneeEmoji && <span>{assigneeEmoji}</span>}
               {assigneeName}
             </div>
           </div>
-          {!chore.is_recurring && (
+          {!chore.isRecurring && (
             <div
               className={`text-xs font-bold px-2 py-1 rounded-md border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] ${
                 chore.completed
@@ -208,7 +208,7 @@ export function ChoreCard({
               {chore.completed ? "Done" : "Pending"}
             </div>
           )}
-          {chore.is_recurring && (
+          {chore.isRecurring && (
             <div
               className={`text-xs font-bold px-2 py-1 rounded-md border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] flex items-center gap-1 ${
                 isMaxReached 

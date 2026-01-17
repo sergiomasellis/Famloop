@@ -1,33 +1,48 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { LeaderboardEntry } from "@/types";
-import { apiFetch } from "@/lib/api";
+import { useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 
-export function useLeaderboard() {
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export type LeaderboardEntry = {
+  user: {
+    _id: Id<"users">;
+    name: string;
+    iconEmoji?: string;
+    profileImageUrl?: string;
+    role: "parent" | "child";
+  };
+  totalPoints: number;
+  weeklyPoints?: number;
+};
 
-  const fetchLeaderboard = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await apiFetch("/points/leaderboard");
-      if (!res.ok) throw new Error("Failed to fetch leaderboard");
-      const data: LeaderboardEntry[] = await res.json();
-      setLeaderboard(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+export function useLeaderboard(weekStart?: number) {
+  // Use weekly leaderboard if weekStart provided, otherwise total leaderboard
+  const totalLeaderboard = useQuery(api.points.getCurrentFamilyLeaderboard);
+  const weeklyLeaderboard = useQuery(
+    api.points.getCurrentFamilyWeeklyLeaderboard,
+    weekStart ? { weekStart } : "skip"
+  );
 
-  useEffect(() => {
-    fetchLeaderboard();
-  }, [fetchLeaderboard]);
+  const leaderboard = useMemo(() => {
+    const data = weekStart ? weeklyLeaderboard : totalLeaderboard;
+    if (!data) return [];
 
-  return { leaderboard, loading, error, refetch: fetchLeaderboard };
+    return data.map((entry) => ({
+      user: entry.user as LeaderboardEntry["user"],
+      totalPoints: "totalPoints" in entry ? entry.totalPoints : 0,
+      weeklyPoints: "weeklyPoints" in entry ? entry.weeklyPoints : undefined,
+    }));
+  }, [totalLeaderboard, weeklyLeaderboard, weekStart]);
+
+  const loading =
+    (weekStart ? weeklyLeaderboard : totalLeaderboard) === undefined;
+
+  return {
+    leaderboard,
+    loading,
+    error: null,
+    refetch: () => {}, // Not needed with Convex - it's reactive
+  };
 }
-

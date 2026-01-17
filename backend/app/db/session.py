@@ -29,12 +29,11 @@ def create_database_engine():
     if settings.is_sqlite:
         # SQLite configuration (development)
         logger.info("Using SQLite database")
-        pool_class = StaticPool if database_url.endswith(":memory:") else SingletonThreadPool
         engine = create_engine(
             database_url,
             echo=settings.debug,
             connect_args={"check_same_thread": False},
-            poolclass=pool_class,
+            poolclass=StaticPool,
         )
 
         # Enable foreign keys for SQLite

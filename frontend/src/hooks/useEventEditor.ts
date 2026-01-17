@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { format } from "date-fns";
-import { EventItem } from "@/types";
+import { EventItem, EventParticipant } from "@/types";
 
 export type EventEditorState = {
   editingId: string | null;
@@ -12,7 +12,7 @@ export type EventEditorState = {
   startTime: string;
   endTime: string;
   location: string;
-  participants: string[];
+  participants: string[]; // Store as names for easy UI binding
 };
 
 export function useEventEditor() {
@@ -33,14 +33,16 @@ export function useEventEditor() {
     setStartTime(format(e.start, "HH:mm"));
     setEndTime(format(e.end, "HH:mm"));
     setLocation(e.description ?? "");
-    setParticipants(e.participants);
+    // Convert EventParticipant[] to string[] (names)
+    setParticipants((e.participants || []).map((p) => p.name));
   }, []);
 
   const closeEditor = useCallback(() => {
     setEditingId(null);
   }, []);
 
-  const getUpdatedEvent = useCallback((): Partial<EventItem> | null => {
+  // Returns event data without participants - call getParticipantNames() separately
+  const getUpdatedEvent = useCallback((): Omit<Partial<EventItem>, 'participants'> | null => {
     if (!editingId) return null;
 
     const start = new Date(startDate + "T" + startTime);
@@ -55,9 +57,13 @@ export function useEventEditor() {
       description: location || undefined,
       start,
       end,
-      participants,
     };
-  }, [editingId, title, startDate, endDate, startTime, endTime, location, participants]);
+  }, [editingId, title, startDate, endDate, startTime, endTime, location]);
+
+  // Returns participant names - caller should convert to EventParticipant[] using familyMembers
+  const getParticipantNames = useCallback((): string[] => {
+    return participants;
+  }, [participants]);
 
   const getEventIdFromSliceKey = useCallback((sliceKey: string): string => {
     // SliceKey format: "evt-{number}-{yyyy-MM-dd}"
@@ -85,6 +91,7 @@ export function useEventEditor() {
     openEditor,
     closeEditor,
     getUpdatedEvent,
+    getParticipantNames,
     getEventIdFromSliceKey,
   };
 }

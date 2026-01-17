@@ -1,7 +1,9 @@
 "use client";
 
 import { format } from "date-fns";
-import { EventItem, Chore, FamilyMember } from "@/types";
+import { EventItem } from "@/types";
+import { Chore } from "@/hooks/useChores";
+import { FamilyMember } from "@/hooks/useFamilyMembers";
 import { isChoreOnDay } from "@/lib/chore-utils";
 import { CheckCircle2, CalendarDays, ListTodo } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -109,9 +111,9 @@ export function TaskView({
                                         )}
                                     </div>
                                     <div className="flex -space-x-2 pl-2">
-                                        {event.participants.slice(0, 3).map((p, i) => (
-                                            <div key={i} className="w-6 h-6 rounded-full bg-muted border-2 border-border flex items-center justify-center text-[8px] font-bold overflow-hidden" title={p}>
-                                                {p.charAt(0)}
+                                        {(event.participants || []).slice(0, 3).map((p, i) => (
+                                            <div key={i} className="w-6 h-6 rounded-full bg-muted border-2 border-border flex items-center justify-center text-[8px] font-bold overflow-hidden" title={p.name}>
+                                                {p.name.charAt(0)}
                                             </div>
                                         ))}
                                     </div>
@@ -131,14 +133,16 @@ export function TaskView({
                     ) : (
                         <div className="space-y-3">
                             {dayChores.map((chore) => {
-                                const isCompleted = chore.completed_today ?? chore.completed;
-                                const assignee = familyMembers.find((m) => m.id === chore.assigned_to);
+                                const isCompleted = chore.completed;
+                                // Get first assignee from assignedToIds array
+                                const assigneeId = chore.assignedToIds?.[0];
+                                const assignee = assigneeId ? familyMembers.find((m) => m._id === assigneeId) : undefined;
                                 return (
-                                <div 
-                                    key={chore.id}
+                                <div
+                                    key={chore._id}
                                     className={`flex items-center gap-3 p-3 rounded-lg border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] transition-all group ${
                                         isCompleted
-                                        ? "bg-muted/50 grayscale opacity-75 hover:translate-x-0 hover:translate-y-0 hover:shadow-[2px_2px_0px_0px_var(--shadow-color)]" 
+                                        ? "bg-muted/50 grayscale opacity-75 hover:translate-x-0 hover:translate-y-0 hover:shadow-[2px_2px_0px_0px_var(--shadow-color)]"
                                         : "bg-card hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_var(--shadow-color)]"
                                     }`}
                                 >
@@ -155,8 +159,8 @@ export function TaskView({
                                     >
                                         {isCompleted && <CheckCircle2 className="size-4" />}
                                     </button>
-                                    
-                                    <div 
+
+                                    <div
                                         className="flex-1 min-w-0 cursor-pointer"
                                         onClick={() => onChoreClick(chore)}
                                     >
@@ -167,20 +171,20 @@ export function TaskView({
                                         <div className={`text-xs flex items-center gap-2 mt-1 ${isCompleted ? "opacity-50" : "text-muted-foreground"}`}>
                                             <span className={`px-2 py-0.5 rounded-md border border-border text-[10px] font-bold shadow-[1px_1px_0px_0px_var(--shadow-color)] ${
                                                 isCompleted
-                                                ? "bg-muted text-muted-foreground" 
+                                                ? "bg-muted text-muted-foreground"
                                                 : "bg-secondary text-secondary-foreground"
-                                            }`}>{chore.point_value} pts</span>
+                                            }`}>{chore.pointValue} pts</span>
                                             {assignee && (
                                                 <div className="flex items-center gap-1 ml-auto">
                                                     <Avatar className="w-5 h-5 border border-border">
-                                                        <AvatarImage src={assignee.profile_image_url || ""} />
+                                                        <AvatarImage src={assignee.profileImageUrl || ""} />
                                                         <AvatarFallback className="text-[8px] font-bold">
                                                             {assignee.name.slice(0, 2).toUpperCase()}
                                                         </AvatarFallback>
                                                     </Avatar>
                                                 </div>
                                             )}
-                                            {!assignee && chore.assigned_to_ids && (
+                                            {!assignee && chore.assignedToIds && chore.assignedToIds.length > 0 && (
                                                 <span className="text-[10px] opacity-70">Assigned</span>
                                             )}
                                         </div>

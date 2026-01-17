@@ -9,9 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFamily } from "@/hooks/useFamily";
-import { useFamilyMembers, useCreateFamilyMember } from "@/hooks/useFamilyMembers";
-import { Sparkles, ArrowLeft, ArrowRight, Users, UserPlus, Mail, Lock } from "lucide-react";
-import { FamilyMember } from "@/types";
+import { useFamilyMembers, useCreateFamilyMember, FamilyMember } from "@/hooks/useFamilyMembers";
+import { Sparkles, ArrowLeft, ArrowRight, Users, UserPlus } from "lucide-react";
 
 function MemberList({ members }: { members: FamilyMember[] }) {
   if (members.length === 0) {
@@ -26,11 +25,15 @@ function MemberList({ members }: { members: FamilyMember[] }) {
     <div className="grid gap-2">
       {members.map((m) => (
         <div
-          key={m.id}
+          key={m._id}
           className="flex items-center justify-between rounded-lg border-2 border-border bg-card px-3 py-2 shadow-[2px_2px_0px_0px_var(--shadow-color)]"
         >
           <div className="flex items-center gap-3">
-            <Users className="h-4 w-4" />
+            {m.iconEmoji ? (
+              <span className="text-xl">{m.iconEmoji}</span>
+            ) : (
+              <Users className="h-4 w-4" />
+            )}
             <div className="flex flex-col">
               <span className="font-semibold">{m.name}</span>
               <span className="text-xs text-muted-foreground">{m.role === "parent" ? "Parent" : "Child"}</span>
@@ -46,12 +49,10 @@ function MemberList({ members }: { members: FamilyMember[] }) {
 function OnboardingMembersContent() {
   const router = useRouter();
   const { family, loading: familyLoading } = useFamily();
-  const { members, loading: membersLoading, refetch: refetchMembers } = useFamilyMembers(family?.id);
+  const { members, loading: membersLoading, refetch: refetchMembers } = useFamilyMembers(family?._id);
   const { createMember, loading: creatingMember } = useCreateFamilyMember();
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [role, setRole] = useState<"parent" | "child">("child");
   const [error, setError] = useState<string | null>(null);
 
@@ -61,11 +62,9 @@ function OnboardingMembersContent() {
     }
   }, [family, familyLoading, router]);
 
-  const showAuthFields = role === "parent";
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!family?.id) return;
+    if (!family?._id) return;
 
     setError(null);
 
@@ -74,30 +73,14 @@ function OnboardingMembersContent() {
       return;
     }
 
-    if (role === "parent") {
-      if (!email.trim()) {
-        setError("Email is required for parents");
-        return;
-      }
-      if (!password || password.length < 6) {
-        setError("Password must be at least 6 characters");
-        return;
-      }
-    }
-
     try {
       await createMember({
         name: name.trim(),
-        email: role === "parent" ? email.trim() : undefined,
-        password: role === "parent" ? password : undefined,
         role,
-        family_id: family.id,
       });
       setName("");
-      setEmail("");
-      setPassword("");
       setRole("child");
-      refetchMembers();
+      // Data updates automatically via Convex reactive queries
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add member");
     }
@@ -128,7 +111,7 @@ function OnboardingMembersContent() {
                 <UserPlus className="h-5 w-5" />
                 Add a member
               </CardTitle>
-              <CardDescription>Parents need email and password. Kids can be added without email.</CardDescription>
+              <CardDescription>Add family members. Kids don&apos;t need email accounts.</CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4">
@@ -160,47 +143,6 @@ function OnboardingMembersContent() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {showAuthFields && (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold" htmlFor="member-email">
-                        Email
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="member-email"
-                          type="email"
-                          placeholder="parent@email.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          disabled={creatingMember || isLoading}
-                          required={showAuthFields}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold" htmlFor="member-password">
-                        Password
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <Lock className="h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="member-password"
-                          type="password"
-                          placeholder="At least 6 characters"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          disabled={creatingMember || isLoading}
-                          required={showAuthFields}
-                          minLength={6}
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
 
                 {error && (
                   <div className="text-sm font-semibold text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2">
@@ -239,7 +181,7 @@ function OnboardingMembersContent() {
             <CardFooter className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 flex-wrap border-t-2 border-border bg-muted/40 mt-2 pt-4">
               <div className="flex items-center gap-2 text-xs text-muted-foreground flex-1 min-w-[260px] whitespace-normal leading-snug">
                 <Badge variant="secondary">Next</Badge>
-                Head to your dashboard once you’re ready.
+                Head to your dashboard once you're ready.
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button
@@ -255,7 +197,7 @@ function OnboardingMembersContent() {
                   type="button"
                   className="w-full sm:w-auto h-12 text-base font-bold"
                   variant="secondary"
-                  onClick={() => router.push("/dashboard")}
+                  onClick={() => router.push("/calendar")}
                 >
                   Go to dashboard
                   <ArrowRight className="h-4 w-4 ml-1" />
@@ -276,5 +218,3 @@ export default function OnboardingMembersPage() {
     </ProtectedRoute>
   );
 }
-
-

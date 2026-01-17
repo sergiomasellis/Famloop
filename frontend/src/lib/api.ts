@@ -81,32 +81,6 @@ export async function resetPassword(token: string, newPassword: string): Promise
   return response.json();
 }
 
-// QR Code login functions
-export async function generateQRCodeSession(): Promise<{ session_token: string; expires_at: string; qr_code_url: string }> {
-  const response = await apiFetch("/auth/qr-code/generate", {
-    method: "POST",
-  });
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "Failed to generate QR code session" }));
-    throw new Error(error.detail || "Failed to generate QR code session");
-  }
-  
-  return response.json();
-}
-
-export async function checkQRCodeStatus(sessionToken: string): Promise<{ status: "pending" | "scanned" | "expired"; access_token?: string }> {
-  const response = await apiFetch(`/auth/qr-code/status/${sessionToken}`, {
-    method: "GET",
-  });
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "Failed to check QR code status" }));
-    throw new Error(error.detail || "Failed to check QR code status");
-  }
-  
-  return response.json();
-}
 
 
 // Billing types

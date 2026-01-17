@@ -15,17 +15,15 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
-// Types
-import { ChoreCreate } from "@/types";
-
 // Hooks
-import { useChores } from "@/hooks/useChores";
+import { useChores, ChoreCreate } from "@/hooks/useChores";
 import { useFamilyMembers } from "@/hooks/useFamilyMembers";
 import { useFamily } from "@/hooks/useFamily";
+import { Id } from "../../../../convex/_generated/dataModel";
 
 // Utilities
 import { getWeekStart } from "@/lib/date";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 // Common emojis for chores
 const CHORE_EMOJIS = [
@@ -38,10 +36,13 @@ function NewChorePageContent() {
   const { family } = useFamily();
 
   // Family ID from user's family
-  const FAMILY_ID = family?.id;
+  const FAMILY_ID = family?._id;
 
-  // Chores management
-  const { createChore } = useChores(FAMILY_ID);
+  // Get current week start timestamp for creating chores
+  const currentWeekStart = getWeekStart(new Date()).getTime();
+
+  // Chores management - pass weekStart timestamp
+  const { createChore } = useChores(currentWeekStart);
 
   // Family members for assignment
   const { members: familyMembers } = useFamilyMembers(FAMILY_ID);
@@ -64,15 +65,22 @@ function NewChorePageContent() {
 
     setSaving(true);
     try {
+      // Convert weekStart date string to timestamp
+      const weekStartTimestamp = parseISO(weekStart).getTime();
+
+      // Build assignedToIds array
+      const assignedToIds: Id<"users">[] | undefined =
+        assignedTo === "unassigned" ? undefined : [assignedTo as Id<"users">];
+
       const newChore: ChoreCreate = {
-        family_id: FAMILY_ID!, // Non-null assertion: we've checked above
         title: title.trim(),
-        description: description.trim() || null,
+        description: description.trim() || undefined,
         emoji,
-        point_value: pointValue,
-        assigned_to: assignedTo === "unassigned" ? null : parseInt(assignedTo),
-        completed: false,
-        week_start: weekStart,
+        pointValue,
+        assignedToIds,
+        isGroupChore: false,
+        weekStart: weekStartTimestamp,
+        isRecurring: false,
       };
       await createChore(newChore);
       router.push("/dashboard#chores");
@@ -181,9 +189,9 @@ function NewChorePageContent() {
               <SelectContent>
                 <SelectItem value="unassigned">Unassigned</SelectItem>
                 {familyMembers.map((member) => (
-                  <SelectItem key={member.id} value={member.id.toString()}>
-                    {member.icon_emoji && (
-                      <span className="mr-2">{member.icon_emoji}</span>
+                  <SelectItem key={member._id} value={member._id}>
+                    {member.iconEmoji && (
+                      <span className="mr-2">{member.iconEmoji}</span>
                     )}
                     {member.name}
                     <span className="ml-2 text-muted-foreground text-xs">

@@ -22,13 +22,13 @@ import {
 type AddMemberDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  familyId: number;
+  familyId: string;
   onSave: (data: {
     name: string;
     email?: string;
     password?: string;
     role: "parent" | "child";
-    family_id: number;
+    family_id?: string;
   }) => Promise<void>;
   loading?: boolean;
 };
@@ -84,7 +84,7 @@ export function AddMemberDialog({
         email: role === "parent" ? email.trim() : undefined,
         password: role === "parent" ? password.trim() : undefined,
         role,
-        family_id: familyId || 0, // Will be handled by parent
+        family_id: familyId || undefined, // Will be handled by parent
       });
       onOpenChange(false);
     } catch (err) {

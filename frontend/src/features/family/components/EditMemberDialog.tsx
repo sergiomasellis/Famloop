@@ -11,16 +11,16 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FamilyMember } from "@/types";
+import { FamilyMember } from "@/hooks/useFamilyMembers";
 
 type EditMemberDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   member?: FamilyMember | null;
-  onSave: (userId: number, data: {
+  onSave: (userId: string, data: {
     name?: string;
-    profile_image_url?: string | null;
-    icon_emoji?: string | null;
+    profileImageUrl?: string | null;
+    iconEmoji?: string | null;
   }) => Promise<void>;
   loading?: boolean;
 };
@@ -42,8 +42,8 @@ export function EditMemberDialog({
   useEffect(() => {
     if (open && member) {
       setName(member.name);
-      setProfileImageUrl(member.profile_image_url || "");
-      setIconEmoji(member.icon_emoji || "");
+      setProfileImageUrl(member.profileImageUrl || "");
+      setIconEmoji(member.iconEmoji || "");
     }
   }, [open, member]);
 
@@ -53,10 +53,10 @@ export function EditMemberDialog({
 
     setSaving(true);
     try {
-      await onSave(member.id, {
+      await onSave(member._id, {
         name: name.trim(),
-        profile_image_url: profileImageUrl.trim() || null,
-        icon_emoji: iconEmoji.trim() || null,
+        profileImageUrl: profileImageUrl.trim() || null,
+        iconEmoji: iconEmoji.trim() || null,
       });
       onOpenChange(false);
     } finally {

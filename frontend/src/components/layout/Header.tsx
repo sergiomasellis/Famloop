@@ -43,11 +43,11 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 
 export function Header() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, signOut } = useAuth();
   const router = useRouter();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     router.push("/");
   };
 
@@ -65,12 +65,13 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-3 sm:px-4">
         <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-2 shrink-0" aria-label="FamLoop Home">
           <Image
-            src="/logo.png"
+            src="/famloop-logo.png"
             alt="FamLoop"
             width={60}
             height={60}
             className="dark:invert"
           />
+          <span className="text-2xl font-semibold">FamLoop</span>
         </Link>
 
         {isAuthenticated && (
@@ -176,7 +177,7 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="touch-manipulation">
                     <Avatar className="size-8">
-                      <AvatarImage src={user?.profile_image_url || undefined} alt={user?.name || "User"} />
+                      <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.name || "User"} />
                       <AvatarFallback>
                         {user ? getInitials(user.name) : "U"}
                       </AvatarFallback>

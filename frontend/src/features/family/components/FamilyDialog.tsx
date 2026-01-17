@@ -12,13 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Family } from "@/hooks/useFamilies";
-import { Users, Lock } from "lucide-react";
+import { Users, KeyRound } from "lucide-react";
 
 type FamilyDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   family?: Family | null;
-  onSave: (data: { name: string; admin_password?: string }, familyId?: number) => Promise<void>;
+  onSave: (data: { name: string; adminPin?: string }, familyId?: string) => Promise<void>;
 };
 
 export function FamilyDialog({
@@ -30,8 +30,8 @@ export function FamilyDialog({
   const isEditing = !!family;
 
   const [name, setName] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,16 +39,22 @@ export function FamilyDialog({
     if (open) {
       if (family) {
         setName(family.name);
-        setAdminPassword("");
-        setConfirmPassword("");
+        setPin("");
+        setConfirmPin("");
       } else {
         setName("");
-        setAdminPassword("");
-        setConfirmPassword("");
+        setPin("");
+        setConfirmPin("");
       }
       setError(null);
     }
   }, [open, family]);
+
+  // Handle PIN input - only allow digits and limit to 6
+  const handlePinChange = (value: string, setter: (v: string) => void) => {
+    const digitsOnly = value.replace(/\D/g, "").slice(0, 6);
+    setter(digitsOnly);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,43 +65,31 @@ export function FamilyDialog({
       return;
     }
 
-    // For new families, password is required
-    if (!isEditing && !adminPassword) {
-      setError("Admin password is required");
+    // For new families, PIN is required
+    if (!isEditing && !pin) {
+      setError("Parent PIN is required");
       return;
     }
 
-    // For editing, if password is provided, validate it
-    if (isEditing && adminPassword) {
-      if (adminPassword.length < 6) {
-        setError("Password must be at least 6 characters");
-        return;
-      }
-      if (adminPassword !== confirmPassword) {
-        setError("Passwords do not match");
-        return;
-      }
+    // Validate PIN format (4-6 digits)
+    if (pin && (pin.length < 4 || pin.length > 6)) {
+      setError("PIN must be 4-6 digits");
+      return;
     }
 
-    // For new families, validate password
-    if (!isEditing) {
-      if (adminPassword.length < 6) {
-        setError("Password must be at least 6 characters");
-        return;
-      }
-      if (adminPassword !== confirmPassword) {
-        setError("Passwords do not match");
-        return;
-      }
+    // Confirm PIN match
+    if (pin && pin !== confirmPin) {
+      setError("PINs do not match");
+      return;
     }
 
     setSaving(true);
     try {
-      const data: { name: string; admin_password?: string } = { name: name.trim() };
-      if (adminPassword) {
-        data.admin_password = adminPassword;
+      const data: { name: string; adminPin?: string } = { name: name.trim() };
+      if (pin) {
+        data.adminPin = pin;
       }
-      await onSave(data, family?.id);
+      await onSave(data, family?._id);
       onOpenChange(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save family");
@@ -114,8 +108,8 @@ export function FamilyDialog({
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? "Update the family name and optionally change the admin password."
-              : "Create a new family group. You'll need to set an admin password for family management."}
+              ? "Update the family name and optionally change the parent PIN."
+              : "Create a new family group. You'll set a parent PIN to protect settings."}
           </DialogDescription>
         </DialogHeader>
 
@@ -135,40 +129,52 @@ export function FamilyDialog({
               />
             </div>
 
-            {/* Admin Password */}
+            {/* Parent PIN */}
             <div className="grid gap-2">
-              <label htmlFor="adminPassword" className="text-sm font-medium flex items-center gap-2">
-                <Lock className="h-4 w-4" />
-                {isEditing ? "New Admin Password (optional)" : "Admin Password"}
+              <label htmlFor="adminPin" className="text-sm font-medium flex items-center gap-2">
+                <KeyRound className="h-4 w-4" />
+                {isEditing ? "New Parent PIN (optional)" : "Parent PIN"}
               </label>
               <Input
-                id="adminPassword"
-                type="password"
-                placeholder={isEditing ? "Leave empty to keep current password" : "Enter admin password"}
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
+                id="adminPin"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder={isEditing ? "Leave empty to keep current PIN" : "4-6 digit PIN"}
+                value={pin}
+                onChange={(e) => handlePinChange(e.target.value, setPin)}
                 required={!isEditing}
+                maxLength={6}
+                className="font-mono text-lg tracking-[0.5em] text-center"
               />
-              {isEditing && (
+              {isEditing ? (
                 <p className="text-xs text-muted-foreground">
-                  Only fill this if you want to change the admin password
+                  Only fill this if you want to change the parent PIN
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  This PIN protects parent-only features like settings.
                 </p>
               )}
             </div>
 
-            {/* Confirm Password (only if password is provided) */}
-            {(adminPassword || !isEditing) && (
+            {/* Confirm PIN (only if PIN is provided or creating new family) */}
+            {(pin || !isEditing) && (
               <div className="grid gap-2">
-                <label htmlFor="confirmPassword" className="text-sm font-medium">
-                  Confirm Password
+                <label htmlFor="confirmPin" className="text-sm font-medium">
+                  Confirm PIN
                 </label>
                 <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Confirm admin password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required={!isEditing || !!adminPassword}
+                  id="confirmPin"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Re-enter PIN"
+                  value={confirmPin}
+                  onChange={(e) => handlePinChange(e.target.value, setConfirmPin)}
+                  required={!isEditing || !!pin}
+                  maxLength={6}
+                  className="font-mono text-lg tracking-[0.5em] text-center"
                 />
               </div>
             )}

@@ -1,6 +1,7 @@
 import logging
 import secrets
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
@@ -8,10 +9,14 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
 import bcrypt
+import httpx
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl
 
 from ..config import settings
 from ..db.session import get_db
-from ..models.models import User, FamilyGroup, PasswordResetToken, QRCodeSession
+from ..models.models import User, FamilyGroup, PasswordResetToken
 from ..services.subscriptions import upsert_subscription
 from ..schemas.schemas import (
     Token,
@@ -22,9 +27,6 @@ from ..schemas.schemas import (
     ForgotPasswordRequest,
     ResetPasswordRequest,
     Message,
-    QRCodeSessionResponse,
-    QRCodeScanRequest,
-    QRCodeStatusResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,6 +65,46 @@ def get_password_hash(password: str) -> str:
     password_bytes = _truncate_password(password)
     salt = bcrypt.gensalt(rounds=12)
     return bcrypt.hashpw(password_bytes, salt).decode("utf-8")
+
+
+def _build_google_redirect_uri() -> str:
+    """Resolve the redirect URI used for Google OAuth callbacks."""
+    return settings.google_redirect_uri or "http://localhost:8000/api/auth/google/callback"
+
+
+def _default_return_url() -> str:
+    """Return default frontend callback URL for OAuth completion."""
+    return settings.default_frontend_origin.rstrip("/") + "/auth/social/callback"
+
+
+def _sanitize_return_url(return_url: Optional[str]) -> str:
+    """Allow return URLs only on configured frontend origins."""
+    if not return_url:
+        return _default_return_url()
+    try:
+        parsed = urlparse(return_url)
+        candidate_origin = f"{parsed.scheme}://{parsed.netloc}"
+    except Exception:
+        return _default_return_url()
+
+    for origin in settings.cors_origins_list:
+        if candidate_origin == origin.rstrip("/"):
+            return return_url
+
+    if settings.frontend_app_url and candidate_origin == settings.frontend_app_url.rstrip("/"):
+        return return_url
+
+    logger.warning("Invalid return_url provided; using default")
+    return _default_return_url()
+
+
+def _append_query(url: str, params: dict[str, str]) -> str:
+    """Append query parameters to a URL safely."""
+    parsed = urlparse(url)
+    query = dict(parse_qsl(parsed.query))
+    query.update(params)
+    new_query = urlencode(query)
+    return urlunparse(parsed._replace(query=new_query))
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -132,6 +174,169 @@ async def get_current_user(
         )
 
     return user
+
+
+@router.get("/google/login")
+async def google_login(return_url: Optional[str] = None):
+    """Begin Google OAuth login/signup."""
+    if not settings.google_client_id or not settings.google_client_secret:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Google OAuth is not configured",
+        )
+
+    sanitized_return_url = _sanitize_return_url(return_url)
+    state_token = create_access_token(
+        data={"sub": "google_oauth_state", "return_url": sanitized_return_url},
+        expires_delta=timedelta(minutes=10),
+    )
+
+    params = {
+        "client_id": settings.google_client_id,
+        "redirect_uri": _build_google_redirect_uri(),
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent",
+        "state": state_token,
+    }
+    auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
+    return RedirectResponse(auth_url)
+
+
+@router.get("/google/callback")
+async def google_callback(code: str, state: str, db: Session = Depends(get_db)):
+    """Handle Google OAuth callback, issue access token, and redirect to frontend."""
+    if not settings.google_client_id or not settings.google_client_secret:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Google OAuth is not configured",
+        )
+
+    payload = decode_token(state)
+    if not payload or payload.get("sub") != "google_oauth_state":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state token"
+        )
+
+    return_url = _sanitize_return_url(payload.get("return_url"))
+
+    token_payload = {
+        "code": code,
+        "client_id": settings.google_client_id,
+        "client_secret": settings.google_client_secret,
+        "redirect_uri": _build_google_redirect_uri(),
+        "grant_type": "authorization_code",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            token_resp = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data=token_payload,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+    except Exception as exc:
+        logger.error("Google token exchange failed", exc_info=True)
+        return RedirectResponse(
+            _append_query(return_url, {"error": "google_token_exchange_failed"}),
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    if token_resp.status_code != 200:
+        logger.warning(
+            "Google token exchange returned non-200",
+            extra={"status": token_resp.status_code, "body": token_resp.text},
+        )
+        return RedirectResponse(
+            _append_query(return_url, {"error": "google_token_exchange_failed"}),
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    token_data = token_resp.json()
+    id_token_value = token_data.get("id_token")
+    if not id_token_value:
+        return RedirectResponse(
+            _append_query(return_url, {"error": "google_missing_id_token"}),
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    try:
+        id_info = google_id_token.verify_oauth2_token(
+            id_token_value, google_requests.Request(), settings.google_client_id
+        )
+    except Exception:
+        logger.warning("Google ID token verification failed", exc_info=True)
+        return RedirectResponse(
+            _append_query(return_url, {"error": "google_invalid_token"}),
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    email = id_info.get("email")
+    if not email:
+        return RedirectResponse(
+            _append_query(return_url, {"error": "google_email_missing"}),
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    name = id_info.get("name") or email.split("@")[0]
+    picture = id_info.get("picture")
+    email_verified = id_info.get("email_verified", False)
+
+    user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
+    created = False
+
+    if not user:
+        placeholder_password = get_password_hash(secrets.token_urlsafe(32))
+        user = User(
+            name=name,
+            email=email,
+            password_hash=placeholder_password,
+            role="parent",
+            family_id=None,
+            profile_image_url=picture,
+            created_at=datetime.utcnow(),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        created = True
+
+        upsert_subscription(
+            db=db,
+            user=user,
+            price_id=None,
+            stripe_subscription_id=None,
+            stripe_customer_id=None,
+            status="inactive",
+            current_period_end=None,
+            cancel_at_period_end=False,
+        )
+    else:
+        updated = False
+        if picture and not user.profile_image_url:
+            user.profile_image_url = picture
+            updated = True
+        if name and not user.name:
+            user.name = name
+            updated = True
+        if updated:
+            db.commit()
+            db.refresh(user)
+
+    access_token = create_access_token(data={"sub": str(user.id)})
+
+    # Redirect back to frontend with token (and optional created flag)
+    params = {"token": access_token}
+    if created:
+        params["created"] = "1"
+    if not email_verified:
+        params["email_unverified"] = "1"
+
+    return RedirectResponse(
+        _append_query(return_url, params),
+        status_code=status.HTTP_302_FOUND,
+    )
 
 
 @router.post("/signup", response_model=Token)
@@ -309,88 +514,3 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     return Message(message="Password has been reset successfully")
 
 
-@router.post("/qr-code/generate", response_model=QRCodeSessionResponse)
-def generate_qr_code_session(db: Session = Depends(get_db)):
-    """Generate a new QR code session for login."""
-    # Generate a secure session token
-    session_token = secrets.token_urlsafe(32)
-
-    # Create session (expires in 5 minutes)
-    qr_session = QRCodeSession(
-        session_token=session_token,
-        expires_at=datetime.utcnow() + timedelta(minutes=5),
-        scanned=False,
-    )
-    db.add(qr_session)
-    db.commit()
-    db.refresh(qr_session)
-
-    # Construct QR code URL (deep link format for mobile app)
-    # Format: famloop://login?token=<session_token>
-    qr_code_url = f"famloop://login?token={session_token}"
-
-    return QRCodeSessionResponse(
-        session_token=session_token,
-        expires_at=qr_session.expires_at,
-        qr_code_url=qr_code_url,
-    )
-
-
-@router.post("/qr-code/scan", response_model=Message)
-def scan_qr_code(payload: QRCodeScanRequest, db: Session = Depends(get_db)):
-    """Scan QR code and associate with user (called from mobile app)."""
-    # Find the session
-    qr_session = db.execute(
-        select(QRCodeSession).where(
-            and_(
-                QRCodeSession.session_token == payload.session_token,
-                ~QRCodeSession.scanned,
-                QRCodeSession.expires_at > datetime.utcnow(),
-            )
-        )
-    ).scalar_one_or_none()
-
-    if not qr_session:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired QR code session",
-        )
-
-    # Verify user exists
-    user = db.get(User, payload.user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
-
-    # Mark session as scanned
-    qr_session.scanned = True
-    qr_session.scanned_at = datetime.utcnow()
-    qr_session.user_id = payload.user_id
-
-    db.commit()
-
-    return Message(message="QR code scanned successfully")
-
-
-@router.get("/qr-code/status/{session_token}", response_model=QRCodeStatusResponse)
-def check_qr_code_status(session_token: str, db: Session = Depends(get_db)):
-    """Check the status of a QR code session (polling endpoint)."""
-    qr_session = db.execute(
-        select(QRCodeSession).where(QRCodeSession.session_token == session_token)
-    ).scalar_one_or_none()
-
-    if not qr_session:
-        return QRCodeStatusResponse(status="expired")
-
-    # Check if expired
-    if qr_session.expires_at < datetime.utcnow():
-        return QRCodeStatusResponse(status="expired")
-
-    # Check if scanned
-    if qr_session.scanned and qr_session.user_id:
-        # Generate auth token for the user
-        access_token = create_access_token(data={"sub": str(qr_session.user_id)})
-        return QRCodeStatusResponse(status="scanned", access_token=access_token)
-
-    return QRCodeStatusResponse(status="pending")

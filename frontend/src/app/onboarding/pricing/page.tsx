@@ -2,33 +2,43 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useAction } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PlanPublic, createCheckoutSession, fetchPlans } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFamily } from "@/hooks/useFamily";
 import { Sparkles, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 
+type Plan = {
+  id: string;
+  name: string;
+  price: number;
+  interval: string;
+  priceId?: string;
+  features: string[];
+};
+
 type PlanFeature = {
   key: string;
   label: string;
-  plans: Array<PlanPublic["name"]>;
+  plans: string[];
 };
 
 const FEATURE_MATRIX: PlanFeature[] = [
-  { key: "kids", label: "Kids per household", plans: ["free", "family_plus", "family_pro"] },
-  { key: "recurring", label: "Recurring chores", plans: ["family_plus", "family_pro"] },
-  { key: "rewards", label: "Rewards & points", plans: ["family_plus", "family_pro"] },
-  { key: "calendar", label: "Calendar sharing/export", plans: ["family_plus", "family_pro"] },
-  { key: "integrations", label: "Integrations (Google/ICS)", plans: ["family_pro"] },
-  { key: "support", label: "Priority support", plans: ["family_pro"] },
+  { key: "kids", label: "Kids per household", plans: ["Free", "Family+", "Family Pro"] },
+  { key: "recurring", label: "Recurring chores", plans: ["Family+", "Family Pro"] },
+  { key: "rewards", label: "Rewards & points", plans: ["Family+", "Family Pro"] },
+  { key: "calendar", label: "Calendar sharing/export", plans: ["Family+", "Family Pro"] },
+  { key: "integrations", label: "Integrations (Google/ICS)", plans: ["Family Pro"] },
+  { key: "support", label: "Priority support", plans: ["Family Pro"] },
 ];
 
-function formatPrice(cents: number | null | undefined) {
-  if (cents == null) return "N/A";
-  return `$${(cents / 100).toFixed(0)}/mo`;
+function formatPrice(price: number) {
+  if (price === 0) return "Free";
+  return `$${price.toFixed(2)}/mo`;
 }
 
 function OnboardingPricingContent() {
@@ -36,24 +46,14 @@ function OnboardingPricingContent() {
   const { isAuthenticated } = useAuth();
   const { family, loading: familyLoading } = useFamily();
 
-  const [plans, setPlans] = useState<PlanPublic[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Fetch plans from Convex
+  const plansData = useQuery(api.billing.getPricingPlans);
+  const createCheckout = useAction(api.billing.createCheckoutSession);
+
+  const plans = (plansData || []) as Plan[];
+  const loading = plansData === undefined;
   const [error, setError] = useState<string | null>(null);
   const [checkingOut, setCheckingOut] = useState<string | null>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await fetchPlans();
-        setPlans(data);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
 
   // Ensure the user completes step 1 first
   useEffect(() => {
@@ -63,7 +63,7 @@ function OnboardingPricingContent() {
   }, [family, familyLoading, router]);
 
   const paidPlans = useMemo(
-    () => plans.filter((p) => p.name !== "free").filter((p) => p.price_monthly_id),
+    () => plans.filter((p) => p.id !== "free").filter((p) => p.priceId),
     [plans]
   );
 
@@ -72,24 +72,28 @@ function OnboardingPricingContent() {
     [plans.length]
   );
 
-  const handleSelect = async (plan: PlanPublic) => {
-    if (plan.name === "free") {
+  const handleSelect = async (plan: Plan) => {
+    if (plan.id === "free") {
       router.push("/onboarding/members");
       return;
     }
 
-    if (!plan.price_monthly_id) {
+    if (!plan.priceId) {
       setError("Billing is not ready yet. Please try again later.");
       return;
     }
 
     try {
-      setCheckingOut(plan.name);
+      setCheckingOut(plan.id);
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const successUrl = `${origin}/onboarding/members`;
       const cancelUrl = `${origin}/onboarding/pricing`;
-      const session = await createCheckoutSession(plan.price_monthly_id, successUrl, cancelUrl);
-      if (typeof window !== "undefined") {
+      const session = await createCheckout({
+        priceId: plan.priceId,
+        successUrl,
+        cancelUrl,
+      });
+      if (typeof window !== "undefined" && session.url) {
         window.location.href = session.url;
       }
     } catch (err) {
@@ -131,40 +135,26 @@ function OnboardingPricingContent() {
               ) : (
                 <div className={`grid gap-4 ${planGridCols}`}>
                   {plans.map((plan) => (
-                    <Card key={plan.name} className={plan.name !== "free" ? "border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)]" : "border-2 border-border"}>
+                    <Card key={plan.id} className={plan.id !== "free" ? "border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)]" : "border-2 border-border"}>
                       <CardHeader className="space-y-1">
                         <CardTitle className="flex items-center justify-between">
-                          <span>{plan.label}</span>
-                          {plan.name === "family_pro" && <Badge>Best value</Badge>}
+                          <span>{plan.name}</span>
+                          {plan.id === "family_pro" && <Badge>Best value</Badge>}
                         </CardTitle>
-                        <CardDescription>{plan.description}</CardDescription>
+                        <CardDescription>
+                          {plan.features.length > 0 ? plan.features[0] : "Basic features"}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="text-3xl font-semibold">
-                          {plan.monthly_price_cents === 0 ? "Free" : formatPrice(plan.monthly_price_cents)}
+                          {formatPrice(plan.price)}
                         </div>
-                        {plan.annual_price_cents ? (
-                          <p className="text-sm text-muted-foreground">
-                            Save with annual: ${(plan.annual_price_cents / 100).toFixed(0)}/yr
-                          </p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">&nbsp;</p>
-                        )}
+                        <p className="text-sm text-muted-foreground">&nbsp;</p>
                         <div className="space-y-2 text-sm">
-                          {FEATURE_MATRIX.map((feature) => (
-                            <div key={feature.key} className="flex flex-wrap items-center gap-2">
+                          {plan.features.map((feature, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
                               <CheckCircle2 className="h-4 w-4 text-primary" />
-                              <span>{feature.label}</span>
-                              {feature.key === "kids" && (
-                                <Badge variant="outline">
-                                  {plan.max_children ? `${plan.max_children} kids` : "Unlimited kids"}
-                                </Badge>
-                              )}
-                              {feature.plans.includes(plan.name) ? (
-                                <Badge variant="secondary">Included</Badge>
-                              ) : (
-                                <Badge variant="outline">Not included</Badge>
-                              )}
+                              <span>{feature}</span>
                             </div>
                           ))}
                         </div>
@@ -173,12 +163,12 @@ function OnboardingPricingContent() {
                         <Button
                           className="w-full"
                           onClick={() => handleSelect(plan)}
-                          variant={plan.name === "free" ? "outline" : "default"}
-                          disabled={checkingOut === plan.name}
+                          variant={plan.id === "free" ? "outline" : "default"}
+                          disabled={checkingOut === plan.id}
                         >
-                          {plan.name === "free"
+                          {plan.id === "free"
                             ? "Start free"
-                            : checkingOut === plan.name
+                            : checkingOut === plan.id
                             ? "Redirecting…"
                             : "Upgrade"}
                         </Button>
