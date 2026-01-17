@@ -26,7 +26,7 @@ export default function LoginPage() {
                 headerTitle: "hidden",
                 headerSubtitle: "hidden",
                 socialButtonsBlockButton:
-                  "h-12 w-full border-2 border-border text-lg font-bold uppercase shadow-[4px_4px_0px_0px_var(--shadow-color)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all bg-card text-foreground",
+                  "h-12 w-full border-2 border-border text-lg font-bold uppercase shadow-[4px_4px_0px_0px_var(--shadow-color)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_var(--shadow-color)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all bg-card text-foreground",
                 socialButtonsBlockButtonText: "font-bold",
                 dividerLine: "bg-border",
                 dividerText: "text-muted-foreground font-bold uppercase text-sm",
@@ -34,7 +34,7 @@ export default function LoginPage() {
                 formFieldInput:
                   "h-12 border-2 border-border bg-input text-foreground text-base shadow-[4px_4px_0px_0px_var(--shadow-color)] focus:ring-0 focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-none transition-all placeholder:text-muted-foreground",
                 formButtonPrimary:
-                  "h-12 w-full border-2 border-border bg-primary text-primary-foreground text-lg font-bold uppercase shadow-[4px_4px_0px_0px_var(--shadow-color)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none hover:bg-primary/90 transition-all",
+                  "h-12 w-full border-2 border-border bg-primary text-primary-foreground text-lg font-bold uppercase shadow-[4px_4px_0px_0px_var(--shadow-color)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_var(--shadow-color)] hover:bg-primary/90 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all",
                 footerAction: "hidden",
                 footer: "hidden",
                 formFieldAction: "text-foreground font-bold text-sm hover:underline",
