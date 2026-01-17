@@ -30,6 +30,12 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     // redirect to onboarding (unless already there)
     if (clerkLoaded && isSignedIn && !familyLoading && !family && !isOnboardingPage) {
       router.push("/onboarding/family");
+      return;
+    }
+
+    // If user has a family and is on an onboarding page, redirect to calendar
+    if (clerkLoaded && isSignedIn && !familyLoading && family && isOnboardingPage) {
+      router.push("/calendar");
     }
   }, [clerkLoaded, isSignedIn, familyLoading, family, isOnboardingPage, router]);
 
