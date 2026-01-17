@@ -21,7 +21,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Chore, ChoreCreate, ChoreUpdate, FamilyMember } from "@/types";
+import { Chore, ChoreCreate, ChoreUpdate } from "@/hooks/useChores";
+import { FamilyMember } from "@/hooks/useFamilyMembers";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { getWeekStart } from "@/lib/date";
 import { format } from "date-fns";
 import { Repeat, Star, Users, Calendar, ChevronDown, Sparkles, Check, Users2, User, ChevronLeft, ChevronRight } from "lucide-react";
@@ -41,8 +43,8 @@ type ChoreDialogProps = {
   onOpenChange: (open: boolean) => void;
   chore?: Chore | null;
   familyMembers: FamilyMember[];
-  familyId: number;
-  onSave: (data: ChoreCreate | ChoreUpdate, choreId?: number) => Promise<void>;
+  familyId: Id<"families">;
+  onSave: (data: ChoreCreate | ChoreUpdate, choreId?: Id<"chores">) => Promise<void>;
 };
 
 export function ChoreDialog({
@@ -61,27 +63,25 @@ export function ChoreDialog({
   const [emoji, setEmoji] = useState("🧹");
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [pointValue, setPointValue] = useState(5);
-  const [assignedToIds, setAssignedToIds] = useState<number[]>([]);
+  const [assignedToIds, setAssignedToIds] = useState<Id<"users">[]>([]);
   const [weekStart, setWeekStart] = useState(() =>
-    format(getWeekStart(new Date()), "yyyy-MM-dd")
+    getWeekStart(new Date()).getTime()
   );
   const [saving, setSaving] = useState(false);
-  
+
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
-  
+
   // Group vs Individual chore
   const [isGroupChore, setIsGroupChore] = useState(true);
-  
-  // Recurring state
+
+  // Recurring state (simplified for Convex)
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState<"daily" | "weekly" | "monthly">("weekly");
-  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [recurrenceCount, setRecurrenceCount] = useState(1);
-  const [recurrenceDays, setRecurrenceDays] = useState<number[]>([]);
-  const [recurrenceTimeOfDay, setRecurrenceTimeOfDay] = useState<"morning" | "afternoon" | "evening" | "anytime">("anytime");
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>("");
+  const [selectedDays, setSelectedDays] = useState<number[]>(() => [new Date().getDay()]);
+  const [maxCompletions, setMaxCompletions] = useState<number | undefined>(undefined);
 
   // Reset form and step when dialog opens or chore changes
   useEffect(() => {
@@ -91,24 +91,15 @@ export function ChoreDialog({
         setTitle(chore.title);
         setDescription(chore.description || "");
         setEmoji(chore.emoji || "🧹");
-        setPointValue(chore.point_value);
-        // Parse assigned_to_ids (comma-separated) or fall back to single assigned_to
-        if (chore.assigned_to_ids) {
-          setAssignedToIds(chore.assigned_to_ids.split(",").map(Number).filter(Boolean));
-        } else if (chore.assigned_to) {
-          setAssignedToIds([chore.assigned_to]);
-        } else {
-          setAssignedToIds([]);
-        }
-        setIsGroupChore(chore.is_group_chore !== false); // Default to true
-        setWeekStart(chore.week_start);
-        setIsRecurring(chore.is_recurring || false);
-        setRecurrenceType(chore.recurrence_type || "weekly");
-        setRecurrenceInterval(chore.recurrence_interval || 1);
-        setRecurrenceCount(chore.recurrence_count || 1);
-        setRecurrenceDays(chore.recurrence_days ? chore.recurrence_days.split(",").map(Number) : []);
-        setRecurrenceTimeOfDay(chore.recurrence_time_of_day || "anytime");
-        setRecurrenceEndDate(chore.recurrence_end_date || "");
+        setPointValue(chore.pointValue);
+        setAssignedToIds(chore.assignedToIds || []);
+        setIsGroupChore(chore.isGroupChore !== false);
+        setWeekStart(chore.weekStart);
+        setIsRecurring(chore.isRecurring || false);
+        setRecurrenceType(chore.recurrenceType || "weekly");
+        setRecurrenceCount(chore.recurrenceCount || 1);
+        setSelectedDays(chore.daysOfWeek || [new Date(chore.weekStart).getDay()]);
+        setMaxCompletions(chore.maxCompletions);
       } else {
         setTitle("");
         setDescription("");
@@ -116,41 +107,29 @@ export function ChoreDialog({
         setPointValue(5);
         setAssignedToIds([]);
         setIsGroupChore(true);
-        setWeekStart(format(getWeekStart(new Date()), "yyyy-MM-dd"));
+        setWeekStart(getWeekStart(new Date()).getTime());
         setIsRecurring(false);
         setRecurrenceType("weekly");
-        setRecurrenceInterval(1);
         setRecurrenceCount(1);
-        setRecurrenceDays([]);
-        setRecurrenceTimeOfDay("anytime");
-        setRecurrenceEndDate("");
+        setSelectedDays([new Date().getDay()]);
+        setMaxCompletions(undefined);
       }
     }
   }, [open, chore]);
 
-  const handleAssigneeToggle = (memberId: number) => {
+  const handleAssigneeToggle = (memberId: Id<"users">) => {
     setAssignedToIds((prev) =>
       prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]
-    );
-  };
-
-  const handleDayToggle = (day: number) => {
-    setRecurrenceDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
     );
   };
 
   const handleNext = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Validation for current step
     if (currentStep === 1 && !title.trim()) {
       return; // Can't proceed without title
-    }
-    if (currentStep === 3 && isRecurring && recurrenceType === "weekly" && recurrenceDays.length === 0) {
-      alert("Please select at least one day of the week");
-      return;
     }
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
@@ -160,7 +139,7 @@ export function ChoreDialog({
   const handlePrevious = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
@@ -168,71 +147,45 @@ export function ChoreDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Only submit on the final step
     if (currentStep !== totalSteps) {
       return;
     }
-    
-    if (!title.trim()) return;
 
-    if (isRecurring && recurrenceType === "weekly" && recurrenceDays.length === 0) {
-      alert("Please select at least one day of the week");
-      return;
-    }
+    if (!title.trim()) return;
 
     setSaving(true);
     try {
-      const recurringFields = isRecurring
-        ? {
-            is_recurring: true,
-            recurrence_type: recurrenceType,
-            recurrence_interval: recurrenceInterval,
-            recurrence_count: recurrenceType === "daily" ? recurrenceCount : null,
-            recurrence_days: recurrenceType === "weekly" ? recurrenceDays.join(",") : null,
-            recurrence_time_of_day: recurrenceType === "daily" ? recurrenceTimeOfDay : null,
-            recurrence_end_date: recurrenceEndDate || null,
-          }
-        : {
-            is_recurring: false,
-            recurrence_type: null,
-            recurrence_interval: null,
-            recurrence_count: null,
-            recurrence_days: null,
-            recurrence_time_of_day: null,
-            recurrence_end_date: null,
-          };
-
-      // Build assigned_to_ids string (comma-separated)
-      const assignedToIdsStr = assignedToIds.length > 0 ? assignedToIds.join(",") : null;
-      // Keep legacy assigned_to for backwards compatibility (first assignee)
-      const legacyAssignedTo = assignedToIds.length > 0 ? assignedToIds[0] : null;
-
       if (isEditing && chore) {
         const updates: ChoreUpdate = {
           title: title.trim(),
-          description: description.trim() || null,
+          description: description.trim() || undefined,
           emoji,
-          point_value: pointValue,
-          assigned_to: legacyAssignedTo,
-          assigned_to_ids: assignedToIdsStr,
-          is_group_chore: isGroupChore,
-          ...recurringFields,
+          pointValue,
+          assignedToIds: assignedToIds.length > 0 ? assignedToIds : undefined,
+          isGroupChore,
+          isRecurring,
+          recurrenceType: isRecurring ? recurrenceType : undefined,
+          recurrenceCount: isRecurring ? recurrenceCount : undefined,
+          daysOfWeek: isRecurring && recurrenceType === "weekly" ? selectedDays : undefined,
+          maxCompletions: isRecurring ? maxCompletions : undefined,
         };
-        await onSave(updates, chore.id);
+        await onSave(updates, chore._id);
       } else {
         const newChore: ChoreCreate = {
-          family_id: familyId,
           title: title.trim(),
-          description: description.trim() || null,
+          description: description.trim() || undefined,
           emoji,
-          point_value: pointValue,
-          assigned_to: legacyAssignedTo,
-          assigned_to_ids: assignedToIdsStr,
-          is_group_chore: isGroupChore,
-          completed: false,
-          week_start: weekStart,
-          ...recurringFields,
+          pointValue,
+          assignedToIds: assignedToIds.length > 0 ? assignedToIds : undefined,
+          isGroupChore,
+          weekStart,
+          isRecurring,
+          recurrenceType: isRecurring ? recurrenceType : undefined,
+          recurrenceCount: isRecurring ? recurrenceCount : undefined,
+          daysOfWeek: isRecurring && recurrenceType === "weekly" ? selectedDays : undefined,
+          maxCompletions: isRecurring ? maxCompletions : undefined,
         };
         await onSave(newChore);
       }
@@ -242,502 +195,351 @@ export function ChoreDialog({
     }
   };
 
-  const DAYS_OF_WEEK = [
-    { value: 0, label: "S", full: "Sunday" },
-    { value: 1, label: "M", full: "Monday" },
-    { value: 2, label: "T", full: "Tuesday" },
-    { value: 3, label: "W", full: "Wednesday" },
-    { value: 4, label: "T", full: "Thursday" },
-    { value: 5, label: "F", full: "Friday" },
-    { value: 6, label: "S", full: "Saturday" },
-  ];
-
-  const getRecurrenceSummary = () => {
-    if (!isRecurring) return null;
-    
-    if (recurrenceType === "daily") {
-      const timeStr = recurrenceTimeOfDay !== "anytime" ? ` in the ${recurrenceTimeOfDay}` : "";
-      return `${recurrenceCount}x daily${timeStr}`;
-    }
-    if (recurrenceType === "weekly") {
-      const days = recurrenceDays.sort().map(d => DAYS_OF_WEEK[d].full.slice(0, 3)).join(", ");
-      const interval = recurrenceInterval > 1 ? `every ${recurrenceInterval} weeks` : "weekly";
-      return `${interval} on ${days || "..."}`;
-    }
-    if (recurrenceType === "monthly") {
-      return recurrenceInterval > 1 ? `every ${recurrenceInterval} months` : "monthly";
-    }
-    return null;
-  };
-
-  const stepLabels = [
-    "Basic Info",
-    "Assignment",
-    "Schedule"
-  ];
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px] p-0 gap-0 max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header with solid color and border */}
-        <div className="bg-primary p-6 text-primary-foreground border-b-2 border-border shrink-0">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase tracking-tight text-primary-foreground flex items-center gap-2">
-              <Sparkles className="h-6 w-6" />
-              {isEditing ? "Edit Chore" : "New Chore"}
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-primary-foreground/80 mt-1 text-sm font-medium">
-            {isEditing ? "Update the chore details" : "Create a fun task for your family!"}
-          </p>
-          
-          {/* Progress Steps */}
-          <div className="mt-6 flex items-center justify-between">
-            {stepLabels.map((label, index) => {
-              const stepNum = index + 1;
-              const isActive = currentStep === stepNum;
-              const isCompleted = currentStep > stepNum;
-              
-              return (
-                <div key={stepNum} className="flex items-center flex-1 last:flex-none last:w-auto">
-                  <div className="flex flex-col items-center z-10 relative">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black border-2 border-border transition-all shadow-[2px_2px_0px_0px_var(--shadow-color)] ${
-                        isActive
-                          ? "bg-background text-foreground scale-110"
-                          : isCompleted
-                          ? "bg-foreground text-background"
-                          : "bg-background/20 text-primary-foreground"
-                      }`}
-                    >
-                      {isCompleted ? <Check className="h-4 w-4" /> : stepNum}
-                    </div>
-                    <span className={`text-xs mt-1.5 font-bold uppercase ${isActive ? "text-primary-foreground" : "text-primary-foreground/60"}`}>
-                      {label}
-                    </span>
-                  </div>
-                  {stepNum < totalSteps && (
-                    <div
-                      className={`h-0.5 flex-1 mx-2 border-t-2 border-dashed border-primary-foreground/50 min-w-[2rem]`}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 min-h-0 flex flex-col">
-          <div className="flex-1 min-h-0 overflow-y-auto p-1">
-            {/* Step 1: Basic Info */}
-            {currentStep === 1 && (
-            <div className="space-y-6">
-              {/* Emoji + Title Row */}
-              <div className="flex gap-3">
-            <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-14 w-14 text-3xl p-0 shrink-0 hover:scale-105 transition-transform border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)]"
-                >
-                  {emoji}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 p-3" align="start">
-                <div className="space-y-3">
-                  {CHORE_EMOJI_GROUPS.map((group) => (
-                    <div key={group.label}>
-                      <p className="text-xs font-medium text-muted-foreground mb-1.5">{group.label}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {group.emojis.map((e) => (
-                          <button
-                            key={e}
-                            type="button"
-                            onClick={() => {
-                              setEmoji(e);
-                              setEmojiPickerOpen(false);
-                            }}
-                            className={`w-9 h-9 text-xl rounded-lg hover:bg-muted transition-colors ${
-                              emoji === e ? "bg-primary/20 ring-2 ring-primary" : ""
-                            }`}
-                          >
-                            {e}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-            <div className="flex-1 space-y-2">
-              <Input
-                placeholder="What's the chore?"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="h-14 text-lg font-medium"
-                required
+      <DialogContent className="sm:max-w-[500px] border-2 border-border shadow-[8px_8px_0px_0px_var(--shadow-color)]">
+        <DialogHeader className="border-b-2 border-border pb-4">
+          <DialogTitle className="font-black uppercase tracking-tight flex items-center gap-2">
+            <span className="text-2xl">{emoji}</span>
+            {isEditing ? "Edit Chore" : "New Chore"}
+          </DialogTitle>
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 mt-2">
+            {Array.from({ length: totalSteps }).map((_, idx) => (
+              <div
+                key={idx}
+                className={`h-2 flex-1 rounded-full transition-colors ${
+                  idx + 1 <= currentStep
+                    ? "bg-primary"
+                    : "bg-muted"
+                }`}
               />
-                </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Step {currentStep} of {totalSteps}:{" "}
+            {currentStep === 1
+              ? "Basic Info"
+              : currentStep === 2
+              ? "Assignment"
+              : "Schedule"}
+          </p>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+          {/* Step 1: Basic Info */}
+          {currentStep === 1 && (
+            <div className="space-y-4">
+              {/* Title */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold uppercase">
+                  Chore Name <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g., Clean room"
+                  className="border-2 border-border focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
+
+              {/* Emoji Picker */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold uppercase">Emoji</label>
+                <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-between border-2 border-border hover:bg-muted"
+                    >
+                      <span className="text-xl">{emoji}</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)]">
+                    <div className="space-y-3">
+                      {CHORE_EMOJI_GROUPS.map((group) => (
+                        <div key={group.label}>
+                          <p className="text-xs font-bold text-muted-foreground mb-1">
+                            {group.label}
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {group.emojis.map((e) => (
+                              <button
+                                key={e}
+                                type="button"
+                                onClick={() => {
+                                  setEmoji(e);
+                                  setEmojiPickerOpen(false);
+                                }}
+                                className={`p-2 text-xl rounded hover:bg-muted transition-colors ${
+                                  emoji === e ? "bg-muted ring-2 ring-primary" : ""
+                                }`}
+                              >
+                                {e}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Description */}
-              <Input
-                placeholder="Add details (optional)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="h-11"
-              />
-
-              {/* Points - Visual Star Rating */}
               <div className="space-y-2">
-                <label className="text-xs font-black uppercase flex items-center gap-2">
-                  <Star className="h-4 w-4" />
-                  Points ({pointValue})
+                <label className="text-sm font-bold uppercase">
+                  Description (optional)
                 </label>
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setPointValue(value)}
-                      className={`w-8 h-8 rounded-md text-sm font-black border-2 border-border transition-all ${
-                        value <= pointValue
-                          ? "bg-secondary text-secondary-foreground scale-100 shadow-[2px_2px_0px_0px_var(--shadow-color)]"
-                          : "bg-muted text-muted-foreground hover:bg-muted/80 scale-90"
-                      }`}
-                    >
-                      {value}
-                    </button>
-                  ))}
-                </div>
+                <Input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g., Vacuum and dust"
+                  className="border-2 border-border"
+                />
+              </div>
+
+              {/* Points */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold uppercase flex items-center gap-2">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  Points
+                </label>
+                <Input
+                  type="number"
+                  value={pointValue}
+                  onChange={(e) => setPointValue(Math.max(1, parseInt(e.target.value) || 1))}
+                  min={1}
+                  className="border-2 border-border"
+                />
               </div>
             </div>
           )}
 
           {/* Step 2: Assignment */}
           {currentStep === 2 && (
-            <div className="space-y-6">
-              {/* Assign To - Multi-select */}
+            <div className="space-y-4">
+              {/* Group vs Individual */}
               <div className="space-y-2">
-            <label className="text-xs font-black uppercase flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Assign to
-              {assignedToIds.length > 0 && (
-                <span className="text-xs font-bold opacity-60">
-                  ({assignedToIds.length} selected)
-                </span>
-              )}
-            </label>
-            <p className="text-xs font-bold text-muted-foreground -mt-1">
-              Select one or more family members
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {familyMembers.map((member) => {
-                const isSelected = assignedToIds.includes(member.id);
-                return (
-                  <button
-                    key={member.id}
+                <label className="text-sm font-bold uppercase flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Chore Type
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
                     type="button"
-                    onClick={() => handleAssigneeToggle(member.id)}
-                    className={`px-3 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 border-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,0)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] ${
-                      isSelected
-                        ? "bg-primary text-primary-foreground border-border shadow-[3px_3px_0px_0px_var(--shadow-color)]"
-                        : "bg-background border-border hover:bg-accent"
-                    }`}
+                    variant={isGroupChore ? "default" : "outline"}
+                    onClick={() => setIsGroupChore(true)}
+                    className="border-2 border-border"
                   >
-                    {isSelected && <Check className="h-3.5 w-3.5" />}
-                    {member.icon_emoji && <span>{member.icon_emoji}</span>}
-                    {member.name}
-                  </button>
-                );
-              })}
-            </div>
+                    <Users2 className="mr-2 h-4 w-4" />
+                    Group
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={!isGroupChore ? "default" : "outline"}
+                    onClick={() => setIsGroupChore(false)}
+                    className="border-2 border-border"
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Individual
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {isGroupChore
+                    ? "One person completes it for everyone"
+                    : "Each person needs to complete it"}
+                </p>
+              </div>
+
+              {/* Assignees */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold uppercase">Assign To</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {familyMembers.map((member) => (
+                    <Button
+                      key={member._id}
+                      type="button"
+                      variant={assignedToIds.includes(member._id) ? "default" : "outline"}
+                      onClick={() => handleAssigneeToggle(member._id)}
+                      className="justify-start border-2 border-border"
+                    >
+                      {assignedToIds.includes(member._id) && (
+                        <Check className="mr-2 h-4 w-4" />
+                      )}
+                      {member.iconEmoji && <span className="mr-2">{member.iconEmoji}</span>}
+                      {member.name}
+                    </Button>
+                  ))}
+                </div>
                 {assignedToIds.length === 0 && (
-                  <p className="text-xs font-bold text-amber-600 dark:text-amber-400 mt-1">
-                    💡 No one selected — anyone can complete this chore
+                  <p className="text-xs text-muted-foreground">
+                    No one assigned - anyone can complete it
                   </p>
                 )}
               </div>
+            </div>
+          )}
 
-              {/* Group vs Individual toggle - only show when multiple people assigned */}
-              {assignedToIds.length > 1 && (
-                <div className="rounded-xl border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden bg-card">
-                  <div className="p-4 space-y-3">
-                    <p className="text-sm font-black uppercase flex items-center gap-2">
-                      <Users2 className="h-4 w-4" />
-                      Completion type
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setIsGroupChore(true)}
-                        className={`p-4 rounded-md text-left transition-all border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] ${
-                          isGroupChore
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-background hover:bg-muted"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <Users className="h-5 w-5" />
-                          <span className="font-black text-sm uppercase">Group</span>
-                        </div>
-                        <p className="text-xs font-bold opacity-80">
-                          One person completes it for everyone
-                        </p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsGroupChore(false)}
-                        className={`p-4 rounded-md text-left transition-all border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] ${
-                          !isGroupChore
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-background hover:bg-muted"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <User className="h-5 w-5" />
-                          <span className="font-black text-sm uppercase">Individual</span>
-                        </div>
-                        <p className="text-xs font-bold opacity-80">
-                          Each person completes their own
-                        </p>
-                      </button>
-                    </div>
+          {/* Step 3: Schedule */}
+          {currentStep === 3 && (
+            <div className="space-y-4">
+              {/* Recurring toggle */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold uppercase flex items-center gap-2">
+                  <Repeat className="h-4 w-4" />
+                  Recurring Chore
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={!isRecurring ? "default" : "outline"}
+                    onClick={() => setIsRecurring(false)}
+                    className="border-2 border-border"
+                  >
+                    One Time
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={isRecurring ? "default" : "outline"}
+                    onClick={() => setIsRecurring(true)}
+                    className="border-2 border-border"
+                  >
+                    <Repeat className="mr-2 h-4 w-4" />
+                    Recurring
+                  </Button>
+                </div>
+              </div>
+
+              {isRecurring && (
+                <>
+                  {/* Recurrence Type */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold uppercase">Repeat</label>
+                    <Select
+                      value={recurrenceType}
+                      onValueChange={(v) => setRecurrenceType(v as typeof recurrenceType)}
+                    >
+                      <SelectTrigger className="border-2 border-border">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {/* Day of Week Selector (for weekly) */}
+                  {recurrenceType === "weekly" && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold uppercase">On These Days</label>
+                      <div className="flex gap-1">
+                        {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+                          <Button
+                            key={index}
+                            type="button"
+                            variant={selectedDays.includes(index) ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                              if (selectedDays.includes(index)) {
+                                // Don't allow deselecting if it's the last day
+                                if (selectedDays.length > 1) {
+                                  setSelectedDays(selectedDays.filter((d) => d !== index));
+                                }
+                              } else {
+                                setSelectedDays([...selectedDays, index].sort());
+                              }
+                            }}
+                            className="w-9 h-9 p-0 border-2 border-border font-bold"
+                          >
+                            {day}
+                          </Button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Select which days of the week this chore repeats
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Max Completions per day */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold uppercase">
+                      Max Completions per Day
+                    </label>
+                    <Input
+                      type="number"
+                      value={maxCompletions || ""}
+                      onChange={(e) => setMaxCompletions(e.target.value ? parseInt(e.target.value) : undefined)}
+                      min={1}
+                      placeholder="Unlimited"
+                      className="border-2 border-border"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Leave empty for unlimited
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Week Start (for non-recurring) */}
+              {!isRecurring && !isEditing && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold uppercase flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Week Starting
+                  </label>
+                  <Input
+                    type="date"
+                    value={format(new Date(weekStart), "yyyy-MM-dd")}
+                    onChange={(e) => setWeekStart(new Date(e.target.value).getTime())}
+                    className="border-2 border-border"
+                  />
                 </div>
               )}
             </div>
           )}
 
-            {/* Step 3: Schedule */}
-            {currentStep === 3 && (
-              <div className="space-y-6">
-                {/* Due Date */}
-                {!isEditing && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-black uppercase flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Due this week starting
-                    </label>
-                    <Input
-                      type="date"
-                      value={weekStart}
-                      onChange={(e) => setWeekStart(e.target.value)}
-                      className="h-11"
-                    />
-                  </div>
-                )}
-
-                {/* Recurring Toggle */}
-                <div className="rounded-xl border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden bg-card">
-                  <button
-                    type="button"
-                    onClick={() => setIsRecurring(!isRecurring)}
-                    className={`w-full px-4 py-4 flex items-center justify-between transition-all ${
-                      isRecurring ? "bg-secondary text-secondary-foreground" : "hover:bg-muted"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-md border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] ${isRecurring ? "bg-foreground text-background" : "bg-muted"}`}>
-                        <Repeat className="h-5 w-5" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-black uppercase text-sm">Recurring chore</p>
-                        <p className="text-xs font-bold opacity-80">
-                          {isRecurring ? getRecurrenceSummary() : "Repeats on a schedule"}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronDown className={`h-5 w-5 transition-transform ${isRecurring ? "rotate-180" : ""}`} />
-                  </button>
-
-                  {/* Recurring Options */}
-                  {isRecurring && (
-                    <div className="p-4 border-t-2 border-border space-y-4 bg-muted/20">
-                    {/* Frequency Type */}
-                    <div className="flex gap-2">
-                      {(["daily", "weekly", "monthly"] as const).map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => setRecurrenceType(type)}
-                          className={`flex-1 py-3 rounded-md text-sm font-black uppercase transition-all border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] ${
-                            recurrenceType === type
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-background"
-                          }`}
-                        >
-                          {type}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Daily Options */}
-                    {recurrenceType === "daily" && (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-xs font-black uppercase text-muted-foreground">How many times per day?</label>
-                          <div className="flex gap-2">
-                            {[1, 2, 3, 4, 5].map((count) => (
-                              <button
-                                key={count}
-                                type="button"
-                                onClick={() => setRecurrenceCount(count)}
-                                className={`flex-1 py-3 rounded-md font-black transition-all border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] ${
-                                  recurrenceCount === count
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-background"
-                                }`}
-                              >
-                                {count}x
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black uppercase text-muted-foreground">When?</label>
-                          <Select value={recurrenceTimeOfDay} onValueChange={(v) => setRecurrenceTimeOfDay(v as typeof recurrenceTimeOfDay)}>
-                            <SelectTrigger className="h-11">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="morning">🌅 Morning</SelectItem>
-                              <SelectItem value="afternoon">☀️ Afternoon</SelectItem>
-                              <SelectItem value="evening">🌙 Evening</SelectItem>
-                              <SelectItem value="anytime">⏰ Any time</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Weekly Options */}
-                    {recurrenceType === "weekly" && (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-xs font-black uppercase text-muted-foreground">Which days?</label>
-                          <div className="flex gap-2">
-                            {DAYS_OF_WEEK.map((day) => (
-                              <button
-                                key={day.value}
-                                type="button"
-                                onClick={() => handleDayToggle(day.value)}
-                                title={day.full}
-                                className={`w-10 h-10 rounded-md text-sm font-black transition-all border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] ${
-                                  recurrenceDays.includes(day.value)
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-background"
-                                }`}
-                              >
-                                {day.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black uppercase text-muted-foreground">Repeat every</label>
-                          <div className="flex gap-2">
-                            {[1, 2, 3, 4].map((interval) => (
-                              <button
-                                key={interval}
-                                type="button"
-                                onClick={() => setRecurrenceInterval(interval)}
-                                className={`flex-1 py-3 rounded-md text-sm font-black transition-all border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] ${
-                                  recurrenceInterval === interval
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-background"
-                                }`}
-                              >
-                                {interval} week{interval > 1 ? "s" : ""}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Monthly Options */}
-                    {recurrenceType === "monthly" && (
-                      <div className="space-y-2">
-                        <label className="text-xs font-black uppercase text-muted-foreground">Repeat every</label>
-                        <div className="flex gap-2">
-                          {[1, 2, 3, 6].map((interval) => (
-                            <button
-                              key={interval}
-                              type="button"
-                              onClick={() => setRecurrenceInterval(interval)}
-                              className={`flex-1 py-3 rounded-md text-sm font-black transition-all border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] ${
-                                recurrenceInterval === interval
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-background"
-                              }`}
-                            >
-                              {interval} mo{interval > 1 ? "s" : ""}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* End Date */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-black uppercase text-muted-foreground">
-                        End date (optional)
-                      </label>
-                      <Input
-                        type="date"
-                        value={recurrenceEndDate}
-                        onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                        className="h-11"
-                      />
-                    </div>
-                  </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Navigation Actions */}
-          <div className="flex gap-3 pt-4 border-t shrink-0">
+          {/* Navigation */}
+          <div className="flex justify-between pt-4 border-t-2 border-border">
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="h-12"
+              onClick={handlePrevious}
+              disabled={currentStep === 1}
+              className="border-2 border-border"
             >
-              Cancel
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Back
             </Button>
-            {currentStep > 1 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-                className="h-12"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-            )}
-              {currentStep < totalSteps ? (
+
+            {currentStep < totalSteps ? (
               <Button
                 type="button"
                 onClick={handleNext}
                 disabled={currentStep === 1 && !title.trim()}
-                className="flex-1 h-12 border-2 border-border bg-primary text-primary-foreground font-bold uppercase shadow-[4px_4px_0px_0px_var(--shadow-color)] hover:bg-primary/90"
+                className="border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)]"
               >
                 Next
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
               <Button
                 type="submit"
                 disabled={saving || !title.trim()}
-                className="flex-1 h-12 border-2 border-border bg-primary text-primary-foreground font-bold uppercase shadow-[4px_4px_0px_0px_var(--shadow-color)] hover:bg-primary/90"
+                className="border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)]"
               >
-                {saving ? "Saving..." : isEditing ? "Save Changes" : "Create Chore"}
+                {saving ? (
+                  <Sparkles className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="mr-2 h-4 w-4" />
+                )}
+                {isEditing ? "Save Changes" : "Create Chore"}
               </Button>
             )}
           </div>
