@@ -14,6 +14,7 @@ import type * as events from "../events.js";
 import type * as families from "../families.js";
 import type * as goals from "../goals.js";
 import type * as http from "../http.js";
+import type * as invitations from "../invitations.js";
 import type * as points from "../points.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as users from "../users.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   families: typeof families;
   goals: typeof goals;
   http: typeof http;
+  invitations: typeof invitations;
   points: typeof points;
   subscriptions: typeof subscriptions;
   users: typeof users;

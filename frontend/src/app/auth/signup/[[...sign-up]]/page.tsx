@@ -2,8 +2,13 @@
 
 import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function SignupPage() {
+function SignupPageContent() {
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect_url");
+
   return (
     <div className="w-full max-w-[400px]">
       <div className="mb-8 text-center">
@@ -52,19 +57,36 @@ export default function SignupPage() {
             }}
             routing="path"
             path="/auth/signup"
-            signInUrl="/auth/login"
-            forceRedirectUrl="/onboarding/family"
+            signInUrl={redirectUrl ? `/auth/login?redirect_url=${encodeURIComponent(redirectUrl)}` : "/auth/login"}
+            forceRedirectUrl={redirectUrl || "/onboarding/family"}
           />
         </div>
         <div className="p-6 pt-0 text-center">
           <p className="text-sm font-bold text-foreground">
             Already registered?{" "}
-            <Link href="/auth/login" className="text-primary hover:underline decoration-2 underline-offset-2">
+            <Link
+              href={redirectUrl ? `/auth/login?redirect_url=${encodeURIComponent(redirectUrl)}` : "/auth/login"}
+              className="text-primary hover:underline decoration-2 underline-offset-2"
+            >
               Sign in to your account
             </Link>
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full max-w-[400px] flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      }
+    >
+      <SignupPageContent />
+    </Suspense>
   );
 }

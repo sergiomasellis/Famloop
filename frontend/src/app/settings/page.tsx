@@ -12,6 +12,9 @@ import { useFamilies, Family } from "@/hooks/useFamilies";
 import { FamilyDialog } from "@/features/family/components/FamilyDialog";
 import { AddMemberDialog } from "@/features/family/components/AddMemberDialog";
 import { EditMemberDialog } from "@/features/family/components/EditMemberDialog";
+import { InviteParentDialog } from "@/features/family/components/InviteParentDialog";
+import { PendingInvitationsList } from "@/features/family/components/PendingInvitationsList";
+import { Mail } from "lucide-react";
 import { useFamilyMembers, useCreateFamilyMember, useUpdateFamilyMember, useDeleteFamilyMember, FamilyMember } from "@/hooks/useFamilyMembers";
 import { useAuth } from "@/contexts/AuthContext";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -32,6 +35,7 @@ function SettingsPageContent() {
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [editMemberDialogOpen, setEditMemberDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   const handleCreateFamily = () => {
     setEditingFamily(null);
@@ -270,6 +274,28 @@ function SettingsPageContent() {
         </CardContent>
       </Card>
 
+      {family && currentUser?.role === "parent" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="size-5" /> Invite Parents
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                Invite another parent to join your family. They will have full parent permissions.
+              </p>
+              <Button onClick={() => setInviteDialogOpen(true)} size="sm" className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Invite Parent
+              </Button>
+            </div>
+            <PendingInvitationsList />
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -318,6 +344,11 @@ function SettingsPageContent() {
         member={editingMember}
         onSave={handleUpdateMember}
         loading={updatingMember}
+      />
+
+      <InviteParentDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
       />
     </div>
   );

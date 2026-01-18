@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(bun run tsc:*)",
+      "Bash(npx convex codegen:*)",
+      "Bash(bun run lint)",
+      "Bash(npx next lint:*)"
     ]
   }
 }

@@ -71,7 +71,7 @@ export function Header() {
             height={60}
             className="dark:invert"
           />
-          <span className="text-2xl font-semibold">FamLoop</span>
+          <span className="text-2xl font-black uppercase tracking-tighter">FAMLOOP</span>
         </Link>
 
         {isAuthenticated && (

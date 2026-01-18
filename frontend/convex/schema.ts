@@ -110,4 +110,23 @@ export default defineSchema({
     prize: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_familyId", ["familyId"]),
+
+  invitations: defineTable({
+    familyId: v.id("families"),
+    email: v.string(),
+    invitedBy: v.id("users"),
+    token: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("cancelled")
+    ),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    acceptedAt: v.optional(v.number()),
+    acceptedBy: v.optional(v.id("users")),
+  })
+    .index("by_familyId", ["familyId"])
+    .index("by_token", ["token"])
+    .index("by_email_status", ["email", "status"]),
 });
