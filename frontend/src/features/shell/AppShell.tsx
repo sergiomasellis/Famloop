@@ -65,7 +65,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         )}
       </main>
-      <footer className="border-t-2 border-border bg-muted/30 mt-auto">
+      <footer className="hidden md:block border-t-2 border-border bg-muted/30">
         <div className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">

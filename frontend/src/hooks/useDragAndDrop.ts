@@ -31,84 +31,124 @@ export function useDragAndDrop({ onDragEnd }: UseDragAndDropOptions) {
   // Keep dragStateRef in sync with state
   dragStateRef.current = dragState;
 
+  // Shared move handler for both mouse and touch
+  const handleMove = useCallback((clientX: number, clientY: number, movementX = 0, movementY = 0) => {
+    const currentDrag = dragStateRef.current;
+    if (!currentDrag) return;
+
+    // Mark that we've actually dragged (moved)
+    if (Math.abs(movementX) > 2 || Math.abs(movementY) > 2) {
+      hasDraggedRef.current = true;
+    }
+
+    const minPerPx = TOTAL_MIN / GRID_PX;
+    const deltaX = clientX - currentDrag.initialClientX;
+    const deltaY = clientY - currentDrag.initialClientY;
+    const dayOffset = Math.round(deltaX / currentDrag.columnWidth);
+
+    // Calculate new start time based on TOTAL delta from ORIGINAL position
+    const rawNewStart = currentDrag.originalStartMinutes + deltaY * minPerPx;
+
+    // Clamp to visible grid range (START_HOUR to END_HOUR minus duration)
+    const minStart = START_HOUR * 60;
+    const maxStart = END_HOUR * 60 - currentDrag.durationMinutes;
+    const newStart = Math.max(minStart, Math.min(maxStart, rawNewStart));
+
+    // Only update if values changed significantly (reduce re-renders)
+    if (Math.abs(newStart - currentDrag.startMinutes) > 0.5 || dayOffset !== currentDrag.dayOffset) {
+      const newState = {
+        ...currentDrag,
+        startMinutes: newStart,
+        dayOffset: dayOffset,
+      };
+      // Update ref immediately so mouseup/touchend gets the latest value
+      dragStateRef.current = newState;
+      setDragState(newState);
+    }
+  }, []);
+
+  // Shared end handler for both mouse and touch
+  const handleEnd = useCallback(() => {
+    // Prevent duplicate calls
+    if (processingDragEndRef.current) {
+      console.log("⚠️ Duplicate drag end call prevented");
+      return;
+    }
+
+    // Use setState callback to ensure we get the LATEST state value
+    // This avoids race conditions where mouseup/touchend fires before React re-renders
+    setDragState((currentDrag) => {
+      if (currentDrag && hasDraggedRef.current && !processingDragEndRef.current) {
+        processingDragEndRef.current = true;
+        // Pass the drag state without the internal originalStartMinutes field
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { originalStartMinutes, ...publicDragState } = currentDrag;
+        console.log("🖱️ Calling onDragEnd for:", publicDragState.id);
+        onDragEndRef.current(publicDragState);
+        lastDragEndRef.current = Date.now();
+
+        // Reset processing flag after a short delay
+        setTimeout(() => {
+          processingDragEndRef.current = false;
+          hasDraggedRef.current = false;
+        }, 100);
+      }
+      return null; // Clear the drag state
+    });
+  }, []);
+
+  // Track last touch position for calculating movement
+  const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+
   // Global drag handlers - only attach/detach when dragging starts/stops
   useEffect(() => {
     // Only set up listeners when dragging is active
     if (!dragState) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const currentDrag = dragStateRef.current;
-      if (!currentDrag) return;
-      
-      // Mark that we've actually dragged (moved the mouse)
-      if (Math.abs(e.movementX) > 2 || Math.abs(e.movementY) > 2) {
-        hasDraggedRef.current = true;
-      }
+      handleMove(e.clientX, e.clientY, e.movementX, e.movementY);
+    };
 
-      const minPerPx = TOTAL_MIN / GRID_PX;
-      const deltaX = e.clientX - currentDrag.initialClientX;
-      const deltaY = e.clientY - currentDrag.initialClientY;
-      const dayOffset = Math.round(deltaX / currentDrag.columnWidth);
-      
-      // Calculate new start time based on TOTAL delta from ORIGINAL position
-      const rawNewStart = currentDrag.originalStartMinutes + deltaY * minPerPx;
-      
-      // Clamp to visible grid range (START_HOUR to END_HOUR minus duration)
-      const minStart = START_HOUR * 60;
-      const maxStart = END_HOUR * 60 - currentDrag.durationMinutes;
-      const newStart = Math.max(minStart, Math.min(maxStart, rawNewStart));
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
 
-      // Only update if values changed significantly (reduce re-renders)
-      if (Math.abs(newStart - currentDrag.startMinutes) > 0.5 || dayOffset !== currentDrag.dayOffset) {
-        const newState = {
-          ...currentDrag,
-          startMinutes: newStart,
-          dayOffset: dayOffset,
-        };
-        // Update ref immediately so mouseup gets the latest value
-        dragStateRef.current = newState;
-        setDragState(newState);
-      }
+      // Calculate movement from last touch position
+      const lastTouch = lastTouchRef.current;
+      const movementX = lastTouch ? touch.clientX - lastTouch.x : 0;
+      const movementY = lastTouch ? touch.clientY - lastTouch.y : 0;
+      lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
+
+      handleMove(touch.clientX, touch.clientY, movementX, movementY);
+
+      // Prevent scrolling while dragging
+      e.preventDefault();
     };
 
     const handleMouseUp = () => {
-      // Prevent duplicate calls
-      if (processingDragEndRef.current) {
-        console.log("⚠️ Duplicate handleMouseUp call prevented");
-        return;
-      }
-      
-      // Use setState callback to ensure we get the LATEST state value
-      // This avoids race conditions where mouseup fires before React re-renders
-      setDragState((currentDrag) => {
-        if (currentDrag && hasDraggedRef.current && !processingDragEndRef.current) {
-          processingDragEndRef.current = true;
-          // Pass the drag state without the internal originalStartMinutes field
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { originalStartMinutes, ...publicDragState } = currentDrag;
-          console.log("🖱️ Calling onDragEnd for:", publicDragState.id);
-          onDragEndRef.current(publicDragState);
-          lastDragEndRef.current = Date.now();
-          
-          // Reset processing flag after a short delay
-          setTimeout(() => {
-            processingDragEndRef.current = false;
-            hasDraggedRef.current = false;
-          }, 100);
-        }
-        return null; // Clear the drag state
-      });
+      handleEnd();
+    };
+
+    const handleTouchEnd = () => {
+      lastTouchRef.current = null;
+      handleEnd();
     };
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
-    
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd);
+    window.addEventListener("touchcancel", handleTouchEnd);
+
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+      window.removeEventListener("touchcancel", handleTouchEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!dragState]); // Only re-run when dragging starts/stops (boolean change)
+  }, [!!dragState, handleMove, handleEnd]); // Only re-run when dragging starts/stops (boolean change)
 
   const startDrag = useCallback(
     (

@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { format } from "date-fns";
 import {
@@ -76,6 +75,9 @@ import { ChoreDialog } from "@/features/chores/components/ChoreDialog";
 
 // Participant selector component
 import { ParticipantSelector } from "@/components/ParticipantSelector";
+
+// Responsive event editor
+import { EventEditorResponsive } from "@/components/EventEditorResponsive";
 
 function DashboardPageContent() {
   // Calendar navigation state
@@ -398,6 +400,126 @@ function DashboardPageContent() {
     return null;
   };
 
+  // Event editor form content (shared between mobile and desktop)
+  const renderEventEditorContent = () => (
+    <>
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">Title</label>
+        <Input
+          value={editor.title}
+          onChange={(e) => editor.setTitle(e.target.value)}
+        />
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid gap-2">
+          <label className="text-sm font-medium">Start Date</label>
+          <Input
+            type="date"
+            value={editor.startDate}
+            onChange={(e) => {
+              const nextStart = e.target.value;
+              editor.setStartDate(nextStart);
+              if (
+                editor.endDate &&
+                nextStart &&
+                editor.endDate < nextStart
+              ) {
+                editor.setEndDate(nextStart);
+              }
+            }}
+          />
+        </div>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium">End Date</label>
+          <Input
+            type="date"
+            value={editor.endDate}
+            min={editor.startDate || undefined}
+            onChange={(e) => {
+              const nextEnd = e.target.value;
+              if (
+                editor.startDate &&
+                nextEnd &&
+                nextEnd < editor.startDate
+              ) {
+                editor.setEndDate(editor.startDate);
+              } else {
+                editor.setEndDate(nextEnd);
+              }
+            }}
+          />
+        </div>
+        <div className="grid gap-2 sm:col-span-2">
+          <span className="text-sm font-medium">Time</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex-1 min-w-0">
+              <Input
+                type="time"
+                value={editor.startTime}
+                onChange={(e) => editor.setStartTime(e.target.value)}
+                className="w-full min-w-0 pr-8 appearance-none"
+              />
+            </div>
+            <span className="shrink-0 text-xs text-muted-foreground">
+              to
+            </span>
+            <div className="flex-1 min-w-0">
+              <Input
+                type="time"
+                value={editor.endTime}
+                onChange={(e) => editor.setEndTime(e.target.value)}
+                className="w-full min-w-0 pr-8 appearance-none"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">
+          Location / Description
+        </label>
+        <Input
+          value={editor.location}
+          onChange={(e) => editor.setLocation(e.target.value)}
+          placeholder="Optional"
+        />
+      </div>
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">Participants</label>
+        <ParticipantSelector
+          familyMembers={familyMembers}
+          selectedNames={editor.participants}
+          onChange={editor.setParticipants}
+          placeholder="Select family members..."
+        />
+      </div>
+      <div className="flex items-center justify-between pt-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteEvent();
+          }}
+        >
+          <Trash2 className="mr-2 size-4" />
+          Delete
+        </Button>
+        <Button
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            saveEdit();
+          }}
+        >
+          <Save className="mr-2 size-4" />
+          Save Changes
+        </Button>
+      </div>
+    </>
+  );
+
   // Render event block
   const renderEventBlock = (
     e: EventItem,
@@ -408,259 +530,137 @@ function DashboardPageContent() {
     const sliceKey = `${e.id}-${dayKey(dayDate)}`;
     const isEditing = editor.editingId === sliceKey;
 
+    const eventBlockElement = (
+      <div
+        role="button"
+        tabIndex={0}
+        className={`timegrid-event cursor-pointer text-left select-none ${
+          EVENT_COLORS[idx % EVENT_COLORS.length]
+        } ${
+          dragState?.id === e.id
+            ? "opacity-80 z-50 shadow-xl scale-[1.02]"
+            : ""
+        }`}
+        style={{
+          ...eventBlockStyle(e, dayDate, dragState),
+          position: "absolute",
+          left: positions[e.id]?.left ?? "0%",
+          width: positions[e.id]?.width ?? "100%",
+          maxHeight: GRID_PX,
+          overflow: "hidden",
+          boxSizing: "border-box",
+          right: "6px",
+          transition:
+            dragState?.id === e.id ? "none" : "transform 0.1s, box-shadow 0.1s",
+        }}
+        data-col-date={format(dayDate, "yyyy-MM-dd")}
+        onMouseDown={(ev) => {
+          ev.stopPropagation();
+          const startMin = minutesFromMidnight(e.start);
+          const endMin = minutesFromMidnight(e.end);
+          const duration = endMin - startMin;
+          const colWidth = (ev.currentTarget.parentElement?.offsetWidth ?? ev.currentTarget.offsetWidth);
+
+          startDrag(
+            e.id,
+            startMin,
+            duration,
+            ev.clientX,
+            ev.clientY,
+            colWidth
+          );
+        }}
+        onTouchStart={(ev) => {
+          if (ev.touches.length !== 1) return;
+          ev.stopPropagation();
+          const touch = ev.touches[0];
+          const startMin = minutesFromMidnight(e.start);
+          const endMin = minutesFromMidnight(e.end);
+          const duration = endMin - startMin;
+          const colWidth = (ev.currentTarget.parentElement?.offsetWidth ?? ev.currentTarget.offsetWidth);
+
+          startDrag(
+            e.id,
+            startMin,
+            duration,
+            touch.clientX,
+            touch.clientY,
+            colWidth
+          );
+        }}
+        onClick={(ev) => {
+          ev.stopPropagation();
+          if (draggingEventIdRef.current === e.id || isDragging || wasJustDragging()) return;
+
+          requestAnimationFrame(() => {
+            editor.setEditingId(sliceKey);
+            openEditor(e);
+          });
+        }}
+        onKeyDown={(ev) => {
+          if (ev.key === "Enter" || ev.key === " ") {
+            ev.preventDefault();
+            ev.stopPropagation();
+            if (draggingEventIdRef.current === e.id || isDragging || wasJustDragging()) return;
+
+            requestAnimationFrame(() => {
+              editor.setEditingId(sliceKey);
+              openEditor(e);
+            });
+          }
+        }}
+        aria-label={`Edit event ${e.title}`}
+      >
+        <div className="title-row">
+          <div className="title">
+            <span className="mr-1">{e.emoji}</span>
+            {e.title}
+          </div>
+        </div>
+        <div className="time">
+          {format(e.start, "p")} – {format(e.end, "p")}
+        </div>
+        {e.description ? <div className="desc">{e.description}</div> : null}
+        <div className="mt-2 flex -space-x-2 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:ring-background *:data-[slot=avatar]:grayscale">
+          {(e.participants || []).map((p, i) => {
+            const member = familyMembers.find((m) => m._id === p.id);
+            const src = member?.profileImageUrl || "";
+            const initials = p.name
+              .split(" ")
+              .map((s) => s[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase() || "?";
+            return (
+              <Avatar key={`${p.id}-${i}`} className="size-6">
+                <AvatarImage
+                  src={src}
+                  alt={p.name}
+                  onError={(ev) => {
+                    (ev.currentTarget as HTMLImageElement).src = "";
+                  }}
+                />
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+            );
+          })}
+        </div>
+      </div>
+    );
+
     return (
-      <Popover
-        key={`pop-${e.id}-${dayKey(dayDate)}`}
+      <EventEditorResponsive
+        key={`editor-${e.id}-${dayKey(dayDate)}`}
         open={isEditing}
         onOpenChange={(o) => {
           if (!o) editor.closeEditor();
         }}
+        trigger={eventBlockElement}
+        title="Edit Event"
+        description="Update details and save."
       >
-        <PopoverTrigger asChild>
-          <div
-            role="button"
-            tabIndex={0}
-            className={`timegrid-event cursor-pointer text-left select-none ${
-              EVENT_COLORS[idx % EVENT_COLORS.length]
-            } ${
-              dragState?.id === e.id
-                ? "opacity-80 z-50 shadow-xl scale-[1.02]"
-                : ""
-            }`}
-            style={{
-              ...eventBlockStyle(e, dayDate, dragState),
-              position: "absolute",
-              left: positions[e.id]?.left ?? "0%",
-              width: positions[e.id]?.width ?? "100%",
-              maxHeight: GRID_PX,
-              overflow: "hidden",
-              boxSizing: "border-box",
-              right: "6px",
-              transition:
-                dragState?.id === e.id ? "none" : "transform 0.1s, box-shadow 0.1s",
-            }}
-            data-col-date={format(dayDate, "yyyy-MM-dd")}
-                        onMouseDown={(ev) => {
-                              ev.stopPropagation();
-                              const startMin = minutesFromMidnight(e.start);
-                              const endMin = minutesFromMidnight(e.end);
-                              const duration = endMin - startMin;
-                              // Get the day column width (parent element), not the event block width
-                              const colWidth = (ev.currentTarget.parentElement?.offsetWidth ?? ev.currentTarget.offsetWidth);
-
-                              startDrag(
-                                e.id,
-                                startMin,
-                                duration,
-                                ev.clientX,
-                                ev.clientY,
-                                colWidth
-                              );
-                            }}
-            onClick={(ev) => {
-              ev.stopPropagation();
-              // Don't open editor if we're currently dragging this event or just finished dragging
-              if (draggingEventIdRef.current === e.id || isDragging || wasJustDragging()) return;
-              
-              const target = ev.currentTarget as HTMLElement | null;
-              requestAnimationFrame(() => {
-                editor.setEditingId(sliceKey);
-                if (target && typeof target.focus === "function") {
-                  try {
-                    target.focus();
-                  } catch {}
-                }
-                openEditor(e);
-              });
-            }}
-            onKeyDown={(ev) => {
-              if (ev.key === "Enter" || ev.key === " ") {
-                ev.preventDefault();
-                ev.stopPropagation();
-                // Don't open editor if we're currently dragging this event or just finished dragging
-                if (draggingEventIdRef.current === e.id || isDragging || wasJustDragging()) return;
-                
-                const target = ev.currentTarget as HTMLElement | null;
-                requestAnimationFrame(() => {
-                  editor.setEditingId(sliceKey);
-                  if (target && typeof target.focus === "function") {
-                    try {
-                      target.focus();
-                    } catch {}
-                  }
-                  openEditor(e);
-                });
-              }
-            }}
-            aria-label={`Edit event ${e.title}`}
-          >
-            <div className="title-row">
-              <div className="title">
-                <span className="mr-1">{e.emoji}</span>
-                {e.title}
-              </div>
-            </div>
-            <div className="time">
-              {format(e.start, "p")} – {format(e.end, "p")}
-            </div>
-            {e.description ? <div className="desc">{e.description}</div> : null}
-            <div className="mt-2 flex -space-x-2 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:ring-background *:data-[slot=avatar]:grayscale">
-              {(e.participants || []).map((p, i) => {
-                // Find the family member to get their profile image
-                const member = familyMembers.find((m) => m._id === p.id);
-                const src = member?.profileImageUrl || "";
-                const initials = p.name
-                  .split(" ")
-                  .map((s) => s[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase() || "?";
-                return (
-                  <Avatar key={`${p.id}-${i}`} className="size-6">
-                    <AvatarImage
-                      src={src}
-                      alt={p.name}
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = "";
-                      }}
-                    />
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
-                );
-              })}
-            </div>
-          </div>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-80"
-          align="start"
-          sideOffset={8}
-          onOpenAutoFocus={(e) => e.preventDefault()}
-        >
-          <div className="grid gap-3">
-            <div className="space-y-1">
-              <h4 className="text-sm font-medium leading-none">Edit Event</h4>
-              <p className="text-xs text-muted-foreground">
-                Update details and save.
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Title</label>
-              <Input
-                value={editor.title}
-                onChange={(e) => editor.setTitle(e.target.value)}
-              />
-            </div>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <label className="text-sm font-medium">Start Date</label>
-                <Input
-                  type="date"
-                  value={editor.startDate}
-                  onChange={(e) => {
-                    const nextStart = e.target.value;
-                    editor.setStartDate(nextStart);
-                    if (
-                      editor.endDate &&
-                      nextStart &&
-                      editor.endDate < nextStart
-                    ) {
-                      editor.setEndDate(nextStart);
-                    }
-                  }}
-                />
-              </div>
-              <div className="grid gap-2">
-                <label className="text-sm font-medium">End Date</label>
-                <Input
-                  type="date"
-                  value={editor.endDate}
-                  min={editor.startDate || undefined}
-                  onChange={(e) => {
-                    const nextEnd = e.target.value;
-                    if (
-                      editor.startDate &&
-                      nextEnd &&
-                      nextEnd < editor.startDate
-                    ) {
-                      editor.setEndDate(editor.startDate);
-                    } else {
-                      editor.setEndDate(nextEnd);
-                    }
-                  }}
-                />
-              </div>
-              <div className="grid gap-2 sm:col-span-2">
-                <span className="text-sm font-medium">Time</span>
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="flex-1 min-w-0">
-                    <Input
-                      type="time"
-                      value={editor.startTime}
-                      onChange={(e) => editor.setStartTime(e.target.value)}
-                      className="w-full min-w-0 pr-8 appearance-none"
-                    />
-                  </div>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    to
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <Input
-                      type="time"
-                      value={editor.endTime}
-                      onChange={(e) => editor.setEndTime(e.target.value)}
-                      className="w-full min-w-0 pr-8 appearance-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">
-                Location / Description
-              </label>
-              <Input
-                value={editor.location}
-                onChange={(e) => editor.setLocation(e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Participants</label>
-              <ParticipantSelector
-                familyMembers={familyMembers}
-                selectedNames={editor.participants}
-                onChange={editor.setParticipants}
-                placeholder="Select family members..."
-              />
-            </div>
-            <div className="flex items-center justify-between pt-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteEvent();
-                }}
-              >
-                <Trash2 className="mr-2 size-4" />
-                Delete
-              </Button>
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  saveEdit();
-                }}
-              >
-                <Save className="mr-2 size-4" />
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+        {renderEventEditorContent()}
+      </EventEditorResponsive>
     );
   };
 
@@ -702,11 +702,12 @@ function DashboardPageContent() {
   return (
     <TooltipProvider delayDuration={0}>
       <div className="space-y-5">
-        {/* Top toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+        {/* Top toolbar - single row on mobile */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Left: Nav arrows + date */}
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0">
             <button
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 border-border bg-card shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_0px_var(--shadow-color)] active:translate-x-[0px] active:translate-y-[0px] active:shadow-none transition-all touch-manipulation"
+              className="inline-flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg border-2 border-border bg-card shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_0px_var(--shadow-color)] active:translate-x-[0px] active:translate-y-[0px] active:shadow-none transition-all touch-manipulation"
               aria-label={
                 view === "month"
                   ? "Previous month"
@@ -719,7 +720,7 @@ function DashboardPageContent() {
               <ChevronLeft className="size-4" aria-hidden="true" />
             </button>
             <button
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 border-border bg-card shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_0px_var(--shadow-color)] active:translate-x-[0px] active:translate-y-[0px] active:shadow-none transition-all touch-manipulation"
+              className="inline-flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg border-2 border-border bg-card shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_0px_var(--shadow-color)] active:translate-x-[0px] active:translate-y-[0px] active:shadow-none transition-all touch-manipulation"
               aria-label={
                 view === "month"
                   ? "Next month"
@@ -731,70 +732,72 @@ function DashboardPageContent() {
             >
               <ChevronRight className="size-4" aria-hidden="true" />
             </button>
-            <div className="text-base sm:text-lg font-black uppercase tracking-tight truncate min-w-0 border-2 border-border bg-card px-3 py-1 rounded-lg shadow-[2px_2px_0px_0px_var(--shadow-color)]">
+            <div className="h-8 sm:h-9 flex items-center text-xs sm:text-base font-black uppercase tracking-tight truncate min-w-0 border-2 border-border bg-card px-2 sm:px-3 rounded-lg shadow-[2px_2px_0px_0px_var(--shadow-color)]">
               {view === "month"
-                ? `${format(monthGrid.firstOfMonth, "MMMM yyyy")}`
+                ? format(monthGrid.firstOfMonth, "MMM yy")
                 : view === "day"
-                ? `${format(weekStart, "EEEE, MMM d, yyyy")}`
+                ? format(weekStart, "MMM d")
                 : view === "task"
-                ? "Task View"
-                : `${format(weekStart, "dd MMM")} – ${format(
-                    addDays(weekStart, 6),
-                    "dd MMM"
-                  )}`}
+                ? "Tasks"
+                : `${format(weekStart, "d")}-${format(addDays(weekStart, 6), "d MMM")}`}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {/* View toggle */}
-            <div className="flex gap-1 p-1 border-2 border-border rounded-xl bg-muted shadow-[2px_2px_0px_0px_var(--shadow-color)]">
+          {/* Right: View toggle + New button */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* View toggle - compact on mobile */}
+            <div className="flex gap-0.5 sm:gap-1 p-0.5 sm:p-1 border-2 border-border rounded-lg sm:rounded-xl bg-muted shadow-[2px_2px_0px_0px_var(--shadow-color)]">
               <button
                 type="button"
                 onClick={() => setView("day")}
-                className={`px-3 py-1.5 text-xs sm:text-sm font-bold uppercase rounded-lg transition-all touch-manipulation ${
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-bold uppercase rounded-md sm:rounded-lg transition-all touch-manipulation ${
                   view === "day"
                     ? "bg-primary text-primary-foreground border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] translate-x-[-1px] translate-y-[-1px]"
                     : "text-muted-foreground hover:bg-background hover:text-foreground"
                 }`}
                 aria-pressed={view === "day"}
               >
-                Day
+                <span className="sm:hidden">D</span>
+                <span className="hidden sm:inline">Day</span>
               </button>
               <button
                 type="button"
                 onClick={() => setView("week")}
-                className={`px-3 py-1.5 text-xs sm:text-sm font-bold uppercase rounded-lg transition-all touch-manipulation ${
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-bold uppercase rounded-md sm:rounded-lg transition-all touch-manipulation ${
                   view === "week"
                     ? "bg-primary text-primary-foreground border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] translate-x-[-1px] translate-y-[-1px]"
                     : "text-muted-foreground hover:bg-background hover:text-foreground"
                 }`}
                 aria-pressed={view === "week"}
               >
-                Week
+                <span className="sm:hidden">W</span>
+                <span className="hidden sm:inline">Week</span>
               </button>
               <button
                 type="button"
                 onClick={() => setView("month")}
-                className={`px-3 py-1.5 text-xs sm:text-sm font-bold uppercase rounded-lg transition-all touch-manipulation ${
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-bold uppercase rounded-md sm:rounded-lg transition-all touch-manipulation ${
                   view === "month"
                     ? "bg-primary text-primary-foreground border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] translate-x-[-1px] translate-y-[-1px]"
                     : "text-muted-foreground hover:bg-background hover:text-foreground"
                 }`}
                 aria-pressed={view === "month"}
               >
-                Month
+                <span className="sm:hidden">M</span>
+                <span className="hidden sm:inline">Month</span>
               </button>
               <button
                 type="button"
                 onClick={() => setView("task")}
-                className={`px-3 py-1.5 text-xs sm:text-sm font-bold uppercase rounded-lg transition-all touch-manipulation ${
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-bold uppercase rounded-md sm:rounded-lg transition-all touch-manipulation ${
                   view === "task"
                     ? "bg-primary text-primary-foreground border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] translate-x-[-1px] translate-y-[-1px]"
                     : "text-muted-foreground hover:bg-background hover:text-foreground"
                 }`}
                 aria-pressed={view === "task"}
               >
-                Tasks
+                <span className="sm:hidden">T</span>
+                <span className="hidden sm:inline">Tasks</span>
               </button>
             </div>
 
@@ -818,7 +821,7 @@ function DashboardPageContent() {
             >
               <DialogTrigger asChild>
                 <Button
-                  className="inline-flex items-center gap-2 rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium shadow-sm touch-manipulation"
+                  className="inline-flex items-center justify-center gap-2 rounded-full h-8 w-8 sm:h-auto sm:w-auto sm:px-4 sm:py-2 text-xs sm:text-sm font-medium shadow-sm touch-manipulation"
                   aria-label="Add item"
                   data-open="new-event"
                 >
