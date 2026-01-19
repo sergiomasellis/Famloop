@@ -16,6 +16,7 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isAuthRoute = pathname?.startsWith("/auth");
+  const isLandingPage = pathname === "/";
   const [isDarkMode, setIsDarkMode] = React.useState(false);
 
   React.useEffect(() => {
@@ -59,38 +60,45 @@ export function AppShell({ children }: AppShellProps) {
           <div className="relative z-10 w-full flex flex-col items-center justify-center min-h-full">
             {children}
           </div>
-        ) : (
-          <div className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 md:py-6 touch-pan-y">
+        ) : isLandingPage ? (
+          // Landing page: full-width, has its own footer
+          <div className="w-full">
             {children}
           </div>
+        ) : (
+          <>
+            <div className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 md:py-6 touch-pan-y">
+              {children}
+            </div>
+            <footer className="mt-auto border-t-2 border-border bg-muted/30">
+              <div className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="font-semibold">FamLoop</span>
+                    <span>•</span>
+                    <span>© {new Date().getFullYear()}</span>
+                  </div>
+                  <nav className="flex items-center gap-4 text-sm">
+                    <Link
+                      href="/legal/privacy"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Privacy Policy
+                    </Link>
+                    <span className="text-muted-foreground">•</span>
+                    <Link
+                      href="/legal/terms"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Terms of Service
+                    </Link>
+                  </nav>
+                </div>
+              </div>
+            </footer>
+          </>
         )}
       </main>
-      <footer className="hidden md:block border-t-2 border-border bg-muted/30">
-        <div className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="font-semibold">FamLoop</span>
-              <span>•</span>
-              <span>© {new Date().getFullYear()}</span>
-            </div>
-            <nav className="flex items-center gap-4 text-sm">
-              <Link
-                href="/legal/privacy"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Privacy Policy
-              </Link>
-              <span className="text-muted-foreground">•</span>
-              <Link
-                href="/legal/terms"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Terms of Service
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

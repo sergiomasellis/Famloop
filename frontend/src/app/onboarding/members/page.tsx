@@ -12,34 +12,49 @@ import { useFamily } from "@/hooks/useFamily";
 import { useFamilyMembers, useCreateFamilyMember, FamilyMember } from "@/hooks/useFamilyMembers";
 import { Sparkles, ArrowLeft, ArrowRight, Users, UserPlus } from "lucide-react";
 
+// Color palette for member cards
+const MEMBER_COLORS = [
+  "bg-[var(--event-purple)]/20",
+  "bg-[var(--event-blue)]/20",
+  "bg-[var(--event-green)]/20",
+  "bg-[var(--event-orange)]/20",
+  "bg-primary/20",
+  "bg-secondary/20",
+];
+
 function MemberList({ members }: { members: FamilyMember[] }) {
   if (members.length === 0) {
     return (
-      <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-        No members yet. Add a parent or kid to get started.
+      <div className="relative rounded-xl border-2 border-dashed border-border p-6 text-center">
+        <div className="text-4xl mb-2">👨‍👩‍👧‍👦</div>
+        <p className="font-bold text-muted-foreground">
+          No members yet. Add a parent or kid to get started!
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-2">
-      {members.map((m) => (
+    <div className="grid gap-3">
+      {members.map((m, index) => (
         <div
           key={m._id}
-          className="flex items-center justify-between rounded-lg border-2 border-border bg-card px-3 py-2 shadow-[2px_2px_0px_0px_var(--shadow-color)]"
+          className={`flex items-center justify-between rounded-xl border-2 border-border ${MEMBER_COLORS[index % MEMBER_COLORS.length]} px-4 py-3 shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all`}
         >
           <div className="flex items-center gap-3">
-            {m.iconEmoji ? (
-              <span className="text-xl">{m.iconEmoji}</span>
-            ) : (
-              <Users className="h-4 w-4" />
-            )}
+            <div className="w-10 h-10 rounded-lg bg-card border-2 border-border shadow-[1px_1px_0px_0px_var(--shadow-color)] flex items-center justify-center">
+              {m.iconEmoji ? (
+                <span className="text-xl">{m.iconEmoji}</span>
+              ) : (
+                <span className="text-lg font-black">{m.name.slice(0, 1).toUpperCase()}</span>
+              )}
+            </div>
             <div className="flex flex-col">
-              <span className="font-semibold">{m.name}</span>
-              <span className="text-xs text-muted-foreground">{m.role === "parent" ? "Parent" : "Child"}</span>
+              <span className="font-black">{m.name}</span>
+              <span className="text-xs font-bold text-muted-foreground uppercase">{m.role}</span>
             </div>
           </div>
-          <Badge variant="outline">{m.email ?? "No email"}</Badge>
+          <Badge className="border-2 border-border shadow-[1px_1px_0px_0px_var(--shadow-color)] font-bold">{m.email ?? "No email"}</Badge>
         </div>
       ))}
     </div>
@@ -156,8 +171,8 @@ function OnboardingMembersContent() {
                   You can add more later in Settings.
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
-                  <Button type="submit" className="w-full sm:w-auto" disabled={creatingMember || isLoading}>
-                    {creatingMember ? "Adding..." : "Add member"}
+                  <Button type="submit" className="w-full sm:w-auto font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all" disabled={creatingMember || isLoading}>
+                    {creatingMember ? "Adding..." : "Add Member"}
                   </Button>
                 </div>
               </CardFooter>
@@ -173,7 +188,10 @@ function OnboardingMembersContent() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {isLoading ? (
-                <div className="p-3 text-muted-foreground">Loading members…</div>
+                <div className="p-6 text-center">
+                  <div className="text-4xl animate-bounce mb-2">👥</div>
+                  <p className="font-bold text-muted-foreground">Loading members...</p>
+                </div>
               ) : (
                 <MemberList members={members} />
               )}
@@ -187,7 +205,7 @@ function OnboardingMembersContent() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full sm:w-auto h-12 text-base font-semibold"
+                  className="w-full sm:w-auto h-12 text-base font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all"
                   onClick={() => router.push("/onboarding/pricing")}
                 >
                   <ArrowLeft className="h-4 w-4 mr-1" />
@@ -195,11 +213,11 @@ function OnboardingMembersContent() {
                 </Button>
                 <Button
                   type="button"
-                  className="w-full sm:w-auto h-12 text-base font-bold"
+                  className="w-full sm:w-auto h-12 text-base font-black uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
                   variant="secondary"
                   onClick={() => router.push("/calendar")}
                 >
-                  Go to dashboard
+                  Go to Dashboard
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>

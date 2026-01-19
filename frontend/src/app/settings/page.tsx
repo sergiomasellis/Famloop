@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, CalendarPlus, Users, Plus, Pencil, Trash2, AlertCircle, UserPlus } from "lucide-react";
+import { Shield, CalendarPlus, Users, Plus, Pencil, Trash2, AlertCircle, UserPlus, Settings, Mail, Sparkles, Crown } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useFamily } from "@/hooks/useFamily";
 import { useFamilies, Family } from "@/hooks/useFamilies";
@@ -14,12 +14,21 @@ import { AddMemberDialog } from "@/features/family/components/AddMemberDialog";
 import { EditMemberDialog } from "@/features/family/components/EditMemberDialog";
 import { InviteParentDialog } from "@/features/family/components/InviteParentDialog";
 import { PendingInvitationsList } from "@/features/family/components/PendingInvitationsList";
-import { Mail } from "lucide-react";
 import { useFamilyMembers, useCreateFamilyMember, useUpdateFamilyMember, useDeleteFamilyMember, FamilyMember } from "@/hooks/useFamilyMembers";
 import { useAuth } from "@/contexts/AuthContext";
 import { Id } from "../../../convex/_generated/dataModel";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+// Color palette for member cards
+const MEMBER_COLORS = [
+  "bg-[var(--event-purple)]/20",
+  "bg-[var(--event-blue)]/20",
+  "bg-[var(--event-green)]/20",
+  "bg-[var(--event-orange)]/20",
+  "bg-primary/20",
+  "bg-secondary/20",
+];
 
 function SettingsPageContent() {
   const { user: currentUser } = useAuth();
@@ -29,7 +38,7 @@ function SettingsPageContent() {
   const { createMember, loading: creatingMember } = useCreateFamilyMember();
   const { updateMember, loading: updatingMember } = useUpdateFamilyMember();
   const { deleteMember, loading: deletingMember } = useDeleteFamilyMember();
-  
+
   const [familyDialogOpen, setFamilyDialogOpen] = useState(false);
   const [editingFamily, setEditingFamily] = useState<Family | null>(null);
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
@@ -57,11 +66,11 @@ function SettingsPageContent() {
       `- All goals\n\n` +
       `This action CANNOT be undone!`
     );
-    
+
     if (!confirmed) {
       return;
     }
-    
+
     const success = await deleteFamily(fam._id);
     if (success) {
       refetchFamily();
@@ -152,30 +161,43 @@ function SettingsPageContent() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
+      {/* Family Management Card */}
+      <Card className="border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden">
+        <CardHeader className="bg-primary text-primary-foreground border-b-2 border-border">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="size-5" /> Family Management
+            <CardTitle className="flex items-center gap-3 font-black uppercase tracking-tight">
+              <Users className="size-6" />
+              Family Management
             </CardTitle>
-            <Button onClick={handleCreateFamily} size="sm" className="w-full sm:w-auto">
+            <Button
+              onClick={handleCreateFamily}
+              size="sm"
+              variant="secondary"
+              className="w-full sm:w-auto font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
+            >
               <Plus className="mr-2 h-4 w-4" />
               New Family
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           {familyLoading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
+            <div className="text-center py-8">
+              <div className="text-4xl animate-bounce mb-2">🏠</div>
+              <p className="font-bold text-muted-foreground">Loading family...</p>
+            </div>
           ) : family ? (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border rounded-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border-2 border-border rounded-xl shadow-[2px_2px_0px_0px_var(--shadow-color)] bg-muted/30">
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-lg break-words">{family.name}</h3>
-                    <Badge variant="outline" className="shrink-0">Current Family</Badge>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="text-3xl">🏠</span>
+                    <h3 className="font-black text-xl uppercase break-words">{family.name}</h3>
+                    <Badge className="shrink-0 border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] font-bold uppercase bg-accent text-accent-foreground">
+                      Current Family
+                    </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm font-bold text-muted-foreground">
                     Created {family.createdAt ? format(new Date(family.createdAt), "MMMM d, yyyy") : "recently"}
                   </p>
                 </div>
@@ -184,7 +206,7 @@ function SettingsPageContent() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleEditFamily(family)}
-                    className="flex-1 sm:flex-initial"
+                    className="flex-1 sm:flex-initial font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all"
                   >
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
@@ -193,7 +215,7 @@ function SettingsPageContent() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleDeleteFamily(family)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-1 sm:flex-initial"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-1 sm:flex-initial font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all"
                   >
                     <AlertCircle className="mr-2 h-4 w-4" />
                     Delete
@@ -202,67 +224,117 @@ function SettingsPageContent() {
               </div>
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground">
-              No family created yet. Create one to start adding members and managing chores.
+            <div className="relative text-center py-12 border-2 border-dashed border-border rounded-xl">
+              <div className="text-5xl mb-4">🏠</div>
+              <h3 className="text-xl font-black uppercase mb-2">No family yet</h3>
+              <p className="text-muted-foreground font-bold mb-4">
+                Create a family to start adding members and managing chores.
+              </p>
+              <Button
+                onClick={handleCreateFamily}
+                className="font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Family
+              </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="size-5" /> Family Members
+      {/* Family Members Card */}
+      <Card className="border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden">
+        <CardHeader className="bg-[var(--event-blue)] border-b-2 border-border">
+          <CardTitle className="flex items-center gap-3 font-black uppercase tracking-tight">
+            <UserPlus className="size-6" />
+            Family Members
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="pt-4 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              Add, edit, or remove family members. Parents require email and password; kids do not.
+            <p className="text-sm font-bold text-muted-foreground">
+              Add, edit, or remove family members. Parents require email; kids do not.
             </p>
-            <Button onClick={handleAddMember} size="sm" className="w-full sm:w-auto" disabled={creatingMember || membersLoading}>
+            <Button
+              onClick={handleAddMember}
+              size="sm"
+              className="w-full sm:w-auto font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
+              disabled={creatingMember || membersLoading}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add Member
             </Button>
           </div>
           {membersLoading ? (
-            <p className="text-sm text-muted-foreground">Loading members...</p>
+            <div className="text-center py-8">
+              <div className="text-4xl animate-bounce mb-2">👥</div>
+              <p className="font-bold text-muted-foreground">Loading members...</p>
+            </div>
           ) : members.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No members yet. Add your family to get started.</p>
+            <div className="relative text-center py-12 border-2 border-dashed border-border rounded-xl">
+              <div className="text-5xl mb-4">👨‍👩‍👧‍👦</div>
+              <h3 className="text-xl font-black uppercase mb-2">No members yet</h3>
+              <p className="text-muted-foreground font-bold">
+                Add your family to get started!
+              </p>
+            </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {members.map((member) => (
-                <Card key={member._id} className="border">
+              {members.map((member, index) => (
+                <Card
+                  key={member._id}
+                  className={`border-2 border-border shadow-[3px_3px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_0px_var(--shadow-color)] transition-all overflow-hidden`}
+                >
+                  {/* Color accent bar */}
+                  <div className={`h-2 ${MEMBER_COLORS[index % MEMBER_COLORS.length].replace('/20', '')} border-b-2 border-border`} />
                   <CardContent className="pt-4 space-y-3">
                     <div className="flex items-center gap-3">
-                      <Avatar className="size-10">
+                      <Avatar className="size-12 border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)]">
                         <AvatarImage src={member.profileImageUrl || undefined} alt={member.name} />
-                        <AvatarFallback>{member.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback className="font-black text-lg bg-primary text-primary-foreground">
+                          {member.iconEmoji || member.name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0">
-                        <p className="font-semibold truncate">{member.name}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{member.role}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-black truncate text-lg">{member.name}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            className={`text-xs font-bold uppercase border border-border ${
+                              member.role === 'parent'
+                                ? 'bg-primary/20 text-foreground'
+                                : 'bg-accent/20 text-foreground'
+                            }`}
+                          >
+                            {member.role === 'parent' && <Crown className="size-3 mr-1" />}
+                            {member.role}
+                          </Badge>
+                          {member._id === currentUser?._id && (
+                            <Badge className="text-xs font-bold uppercase bg-secondary text-secondary-foreground border border-border">
+                              You
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1"
+                        className="flex-1 font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all"
                         onClick={() => handleEditMember(member)}
                         disabled={updatingMember}
                       >
-                        <Pencil className="mr-2 h-4 w-4" />
+                        <Pencil className="mr-2 h-3 w-3" />
                         Edit
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10 font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all"
                         onClick={() => handleDeleteMember(member)}
-                        disabled={deletingMember}
+                        disabled={deletingMember || member._id === currentUser?._id}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="mr-2 h-3 w-3" />
                         Remove
                       </Button>
                     </div>
@@ -274,19 +346,25 @@ function SettingsPageContent() {
         </CardContent>
       </Card>
 
+      {/* Invite Parents Card */}
       {family && currentUser?.role === "parent" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="size-5" /> Invite Parents
+        <Card className="border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden">
+          <CardHeader className="bg-[var(--event-green)] border-b-2 border-border">
+            <CardTitle className="flex items-center gap-3 font-black uppercase tracking-tight">
+              <Mail className="size-6" />
+              Invite Parents
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-4 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm font-bold text-muted-foreground">
                 Invite another parent to join your family. They will have full parent permissions.
               </p>
-              <Button onClick={() => setInviteDialogOpen(true)} size="sm" className="w-full sm:w-auto">
+              <Button
+                onClick={() => setInviteDialogOpen(true)}
+                size="sm"
+                className="w-full sm:w-auto font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Invite Parent
               </Button>
@@ -296,25 +374,37 @@ function SettingsPageContent() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="size-5" /> Security & Access
+      {/* Security Card */}
+      <Card className="border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden">
+        <CardHeader className="bg-[var(--event-purple)] border-b-2 border-border">
+          <CardTitle className="flex items-center gap-3 font-black uppercase tracking-tight">
+            <Shield className="size-6" />
+            Security & Access
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <p>
+        <CardContent className="pt-4 space-y-4">
+          <p className="text-sm font-bold text-muted-foreground">
             Family admin password protects family-level changes. Share member logins carefully. Reset parent passwords from the login page if needed.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" asChild>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all"
+            >
               <Link href="/auth/forgot-password">
-                Reset parent password
+                🔑 Reset Password
               </Link>
             </Button>
-            <Button variant="outline" size="sm" asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all"
+            >
               <Link href="/auth/login">
-                Sign in as another user
+                👤 Switch User
               </Link>
             </Button>
           </div>
@@ -358,14 +448,22 @@ export default function SettingsPage() {
   return (
     <ProtectedRoute>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">Settings</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-4xl font-black uppercase tracking-tight flex items-center gap-3">
+              <Settings className="size-8" />
+              Settings
+            </h1>
+            <p className="text-muted-foreground mt-2 font-bold">
               Manage your family, members, and security preferences.
             </p>
           </div>
-          <Button variant="outline" asChild>
+          <Button
+            variant="outline"
+            asChild
+            className="font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all"
+          >
             <Link href="/dashboard">
               <CalendarPlus className="mr-2 h-4 w-4" />
               Back to Dashboard
@@ -378,4 +476,3 @@ export default function SettingsPage() {
     </ProtectedRoute>
   );
 }
-

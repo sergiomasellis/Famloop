@@ -24,11 +24,9 @@ import {
   CalendarDays,
   ListTodo,
   Trophy,
-  Shield,
   LogIn,
   UserPlus,
   LogOut,
-  Tag,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
@@ -211,12 +209,6 @@ export function Header() {
           ) : (
             <>
               <ThemeToggle />
-              <Button variant="ghost" asChild className="hidden sm:inline-flex">
-                <Link href="/pricing">
-                  <Tag className="mr-2 size-4" />
-                  Pricing
-                </Link>
-              </Button>
               <Button variant="outline" asChild className="hidden sm:inline-flex">
                 <Link href="/auth/login">
                   <LogIn className="mr-2 size-4" />

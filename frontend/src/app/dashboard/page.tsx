@@ -978,10 +978,12 @@ function DashboardPageContent() {
         </div>
 
         {/* Main board */}
-        <div className="rounded-lg border p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <CalendarDays className="size-5" aria-hidden="true" />
-            <h1 className="text-xl font-semibold tracking-tight">
+        <div className="rounded-xl border-2 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--shadow-color)]">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="p-2 bg-primary rounded-lg border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)]">
+              <CalendarDays className="size-5 text-primary-foreground" aria-hidden="true" />
+            </div>
+            <h1 className="text-2xl font-black uppercase tracking-tight">
               {view === "day"
                 ? "Daily Dashboard"
                 : view === "week"
@@ -991,14 +993,14 @@ function DashboardPageContent() {
                 : "Monthly Dashboard"}
             </h1>
           </div>
-          <Separator className="mb-4" />
+          <Separator className="mb-4 border-border" />
 
            <Tabs defaultValue="events" className="w-full">
-             <TabsList className="w-full max-w-xs rounded-full bg-muted/60 p-1">
-               <TabsTrigger className="rounded-full" value="events">
+             <TabsList className="w-full max-w-xs rounded-xl bg-muted border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] p-1">
+               <TabsTrigger className="rounded-lg font-bold uppercase data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-2 data-[state=active]:border-border data-[state=active]:shadow-[2px_2px_0px_0px_var(--shadow-color)]" value="events">
                  Events
                </TabsTrigger>
-               <TabsTrigger className="rounded-full" value="chores">
+               <TabsTrigger className="rounded-lg font-bold uppercase data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-2 data-[state=active]:border-border data-[state=active]:shadow-[2px_2px_0px_0px_var(--shadow-color)]" value="chores">
                  Chores
                </TabsTrigger>
              </TabsList>
@@ -1024,10 +1026,10 @@ function DashboardPageContent() {
                 />
               ) : view === "week" ? (
                 /* WEEK VIEW */
-                <div className="rounded-xl border bg-card/90 p-2 sm:p-3 shadow-sm transition hover:shadow-md">
+                <div className="rounded-xl border-2 border-border bg-card p-2 sm:p-3 shadow-[4px_4px_0px_0px_var(--shadow-color)]">
                   <div className="mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                    <div className="text-sm font-semibold">This Week</div>
-                    <div className="text-[11px] text-muted-foreground">
+                    <div className="text-sm font-black uppercase">This Week</div>
+                    <div className="text-[11px] font-bold text-muted-foreground px-2 py-1 bg-muted rounded-md border-2 border-border">
                       {format(weekStart, "MMM d")} –{" "}
                       {format(addDays(weekStart, 6), "MMM d")}
                     </div>
@@ -1074,15 +1076,15 @@ function DashboardPageContent() {
                                   <div
                                     key={`wk-chore-${chore._id}`}
                                     onClick={() => handleChoreClick(chore)}
-                                    className={`truncate rounded px-1.5 py-0.5 text-[9px] sm:text-[10px] cursor-pointer transition flex items-center gap-1 touch-manipulation ${
+                                    className={`truncate rounded-md px-1.5 py-0.5 text-[9px] sm:text-[10px] cursor-pointer transition flex items-center gap-1 touch-manipulation border border-border ${
                                       chore.completed
-                                        ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 line-through opacity-60"
-                                        : "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900"
+                                        ? "bg-accent/20 text-accent-foreground line-through opacity-60"
+                                        : "bg-[var(--event-purple)]/20 text-foreground hover:bg-[var(--event-purple)]/30 hover:translate-x-[-1px] hover:translate-y-[-1px]"
                                     }`}
                                   >
                                     {chore.completed && <CheckCircle2 className="h-2.5 w-2.5 shrink-0" />}
                                     <span>{chore.emoji || "📋"}</span>
-                                    <span className="truncate">{chore.title}</span>
+                                    <span className="truncate font-bold">{chore.title}</span>
                                   </div>
                                 ))}
                                 {dayChores.length > 3 && (
@@ -1142,12 +1144,12 @@ function DashboardPageContent() {
                 </div>
               ) : (
                 /* DAY VIEW */
-                <div className="rounded-xl border bg-card/90 p-3 shadow-sm transition hover:shadow-md">
+                <div className="rounded-xl border-2 border-border bg-card p-3 shadow-[4px_4px_0px_0px_var(--shadow-color)]">
                   <div className="mb-2 flex items-center justify-between">
-                    <div className="text-sm font-semibold">
+                    <div className="text-sm font-black uppercase">
                       {format(selectedDay, "EEEE dd")}
                     </div>
-                    <div className="text-[11px] text-muted-foreground">
+                    <div className="text-[11px] font-bold text-muted-foreground px-2 py-1 bg-muted rounded-md border-2 border-border">
                       {format(selectedDay, "MMM d, yyyy")}
                     </div>
                   </div>
@@ -1157,24 +1159,26 @@ function DashboardPageContent() {
                     const dayChores = getChoresForDay(selectedDay);
                     if (dayChores.length === 0) return null;
                     return (
-                      <div className="mb-3 p-2 rounded-lg bg-muted/40">
-                        <div className="text-[10px] font-medium text-muted-foreground mb-2">CHORES DUE</div>
+                      <div className="mb-3 p-3 rounded-xl bg-muted/40 border-2 border-border">
+                        <div className="text-[10px] font-black uppercase text-muted-foreground mb-2 flex items-center gap-2">
+                          <span className="text-lg">📋</span> CHORES DUE TODAY
+                        </div>
                         <div className="flex flex-wrap gap-2">
                           {dayChores.map((chore) => (
                             <div
                               key={`day-chore-${chore._id}`}
                               onClick={() => handleChoreClick(chore)}
-                              className={`rounded-lg px-3 py-2 text-sm cursor-pointer transition flex items-center gap-2 ${
+                              className={`rounded-lg px-3 py-2 text-sm cursor-pointer transition flex items-center gap-2 border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] ${
                                 chore.completed
-                                  ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 line-through opacity-60"
-                                  : "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900"
+                                  ? "bg-accent/20 text-accent-foreground line-through opacity-60"
+                                  : "bg-[var(--event-purple)]/20 text-foreground"
                               }`}
                             >
                               {chore.completed && <CheckCircle2 className="h-4 w-4 shrink-0" />}
                               <span className="text-lg">{chore.emoji || "📋"}</span>
                               <div>
-                                <div className="font-medium">{chore.title}</div>
-                                <div className="text-xs opacity-70">{chore.pointValue} pts</div>
+                                <div className="font-bold">{chore.title}</div>
+                                <div className="text-xs font-bold opacity-70">{chore.pointValue} pts</div>
                               </div>
                             </div>
                           ))}
@@ -1229,28 +1233,41 @@ function DashboardPageContent() {
             <TabsContent value="chores" className="mt-4" id="chores">
               {/* Chores toolbar */}
               <div className="flex items-center justify-between mb-4">
-                <div className="text-sm text-muted-foreground">
-                  {apiChores.length} chore{apiChores.length !== 1 ? "s" : ""}{" "}
-                  ({apiChores.filter((c) => c.completed).length} completed)
+                <div className="flex items-center gap-3">
+                  <div className="text-sm font-bold text-foreground px-3 py-1 bg-[var(--event-purple)]/20 rounded-lg border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)]">
+                    {apiChores.length} chore{apiChores.length !== 1 ? "s" : ""}
+                  </div>
+                  <div className="text-sm font-bold text-foreground px-3 py-1 bg-accent/20 rounded-lg border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)]">
+                    {apiChores.filter((c) => c.completed).length} done
+                  </div>
                 </div>
-                <Button onClick={handleOpenNewChore} size="sm">
+                <Button onClick={handleOpenNewChore} size="sm" className="font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all">
                   <Plus className="size-4 mr-2" />
                   Add Chore
                 </Button>
               </div>
 
               {choresLoading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Loading chores...
+                <div className="text-center py-12 border-2 border-border rounded-xl shadow-[4px_4px_0px_0px_var(--shadow-color)]">
+                  <div className="text-6xl animate-bounce mb-4">🧹</div>
+                  <p className="font-black uppercase text-lg">Loading chores...</p>
                 </div>
               ) : apiChores.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                  <p className="text-muted-foreground mb-4">
-                    No chores yet. Create your first chore!
+                <div className="relative text-center py-16 border-2 border-border rounded-xl shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden">
+                  {/* Decorative corners */}
+                  <div className="absolute top-4 left-4 w-8 h-8 border-t-4 border-l-4 border-border rounded-tl-xl" />
+                  <div className="absolute top-4 right-4 w-8 h-8 border-t-4 border-r-4 border-border rounded-tr-xl" />
+                  <div className="absolute bottom-4 left-4 w-8 h-8 border-b-4 border-l-4 border-border rounded-bl-xl" />
+                  <div className="absolute bottom-4 right-4 w-8 h-8 border-b-4 border-r-4 border-border rounded-br-xl" />
+
+                  <div className="text-6xl mb-4">🎯</div>
+                  <h3 className="text-2xl font-black uppercase mb-2">No chores yet!</h3>
+                  <p className="text-muted-foreground font-bold mb-6">
+                    Create your first chore and start earning points!
                   </p>
-                  <Button onClick={handleOpenNewChore}>
+                  <Button onClick={handleOpenNewChore} className="font-black uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_0px_var(--shadow-color)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all">
                     <Plus className="size-4 mr-2" />
-                    Create Chore
+                    Create First Chore
                   </Button>
                 </div>
               ) : (

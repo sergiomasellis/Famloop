@@ -127,7 +127,10 @@ function OnboardingPricingContent() {
             </CardHeader>
             <CardContent className="space-y-4">
               {loading ? (
-                <div className="p-6 text-muted-foreground">Loading plans…</div>
+                <div className="p-6 text-center">
+                  <div className="text-4xl animate-bounce mb-2">💰</div>
+                  <p className="font-bold text-muted-foreground">Loading plans...</p>
+                </div>
               ) : error ? (
                 <div className="p-4 rounded-md border-2 border-destructive bg-destructive/10 text-destructive text-sm font-semibold">
                   {error}
@@ -161,16 +164,16 @@ function OnboardingPricingContent() {
                       </CardContent>
                       <CardFooter>
                         <Button
-                          className="w-full"
+                          className="w-full font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
                           onClick={() => handleSelect(plan)}
                           variant={plan.id === "free" ? "outline" : "default"}
                           disabled={checkingOut === plan.id}
                         >
                           {plan.id === "free"
-                            ? "Start free"
+                            ? "Start Free"
                             : checkingOut === plan.id
-                            ? "Redirecting…"
-                            : "Upgrade"}
+                            ? "Redirecting..."
+                            : "Upgrade Now"}
                         </Button>
                       </CardFooter>
                     </Card>
@@ -193,7 +196,7 @@ function OnboardingPricingContent() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all"
                   onClick={() => router.push("/onboarding/family")}
                 >
                   <ArrowLeft className="h-4 w-4 mr-1" />
@@ -201,7 +204,7 @@ function OnboardingPricingContent() {
                 </Button>
                 <Button
                   type="button"
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto font-bold uppercase border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_var(--shadow-color)] transition-all"
                   variant="secondary"
                   onClick={() => router.push("/dashboard")}
                 >
