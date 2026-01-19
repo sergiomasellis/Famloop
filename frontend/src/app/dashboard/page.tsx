@@ -410,12 +410,13 @@ function DashboardPageContent() {
           onChange={(e) => editor.setTitle(e.target.value)}
         />
       </div>
-      <div className="grid sm:grid-cols-2 gap-3">
-        <div className="grid gap-2">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-2 min-w-0">
           <label className="text-sm font-medium">Start Date</label>
           <Input
             type="date"
             value={editor.startDate}
+            className="w-full min-w-0 appearance-none [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
             onChange={(e) => {
               const nextStart = e.target.value;
               editor.setStartDate(nextStart);
@@ -429,12 +430,13 @@ function DashboardPageContent() {
             }}
           />
         </div>
-        <div className="grid gap-2">
+        <div className="grid gap-2 min-w-0">
           <label className="text-sm font-medium">End Date</label>
           <Input
             type="date"
             value={editor.endDate}
             min={editor.startDate || undefined}
+            className="w-full min-w-0 appearance-none [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
             onChange={(e) => {
               const nextEnd = e.target.value;
               if (
@@ -449,7 +451,7 @@ function DashboardPageContent() {
             }}
           />
         </div>
-        <div className="grid gap-2 sm:col-span-2">
+        <div className="grid gap-2 col-span-2">
           <span className="text-sm font-medium">Time</span>
           <div className="flex items-center gap-2 min-w-0">
             <div className="flex-1 min-w-0">
@@ -866,12 +868,13 @@ function DashboardPageContent() {
                       />
                     </div>
 
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="grid gap-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-2 min-w-0">
                         <label className="text-sm font-medium">Start Date</label>
                         <Input
                           type="date"
                           value={draftStartDate}
+                          className="w-full min-w-0 appearance-none [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                           onChange={(e) => {
                             const nextStart = e.target.value;
                             setDraftStartDate(nextStart);
@@ -885,12 +888,13 @@ function DashboardPageContent() {
                           }}
                         />
                       </div>
-                      <div className="grid gap-2">
+                      <div className="grid gap-2 min-w-0">
                         <label className="text-sm font-medium">End Date</label>
                         <Input
                           type="date"
                           value={draftEndDate}
                           min={draftStartDate || undefined}
+                          className="w-full min-w-0 appearance-none [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                           onChange={(e) => {
                             const nextEnd = e.target.value;
                             if (
