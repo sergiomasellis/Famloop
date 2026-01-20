@@ -12,7 +12,12 @@ export type EventEditorState = {
   startTime: string;
   endTime: string;
   location: string;
-  participants: string[]; // Store as names for easy UI binding
+  participantIds: string[]; // Store as IDs for unique identification
+  // Recurrence fields
+  isRecurring: boolean;
+  recurrenceType: "daily" | "weekly" | "monthly";
+  daysOfWeek: number[];
+  recurrenceEndDate: string;
 };
 
 export function useEventEditor() {
@@ -24,6 +29,11 @@ export function useEventEditor() {
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [participants, setParticipants] = useState<string[]>([]);
+  // Recurrence state
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceType, setRecurrenceType] = useState<"daily" | "weekly" | "monthly">("weekly");
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([]);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
 
   const openEditor = useCallback((e: EventItem, sliceKey: string) => {
     setEditingId(sliceKey);
@@ -33,8 +43,13 @@ export function useEventEditor() {
     setStartTime(format(e.start, "HH:mm"));
     setEndTime(format(e.end, "HH:mm"));
     setLocation(e.description ?? "");
-    // Convert EventParticipant[] to string[] (names)
-    setParticipants((e.participants || []).map((p) => p.name));
+    // Convert EventParticipant[] to string[] (IDs)
+    setParticipants((e.participants || []).map((p) => p.id));
+    // Set recurrence fields
+    setIsRecurring(e.isRecurring ?? false);
+    setRecurrenceType(e.recurrenceType ?? "weekly");
+    setDaysOfWeek(e.daysOfWeek ?? [e.start.getDay()]);
+    setRecurrenceEndDate(e.recurrenceEndDate ? format(e.recurrenceEndDate, "yyyy-MM-dd") : "");
   }, []);
 
   const closeEditor = useCallback(() => {
@@ -57,11 +72,19 @@ export function useEventEditor() {
       description: location || undefined,
       start,
       end,
+      // Recurrence fields
+      isRecurring,
+      recurrenceType: isRecurring ? recurrenceType : undefined,
+      recurrenceCount: isRecurring ? 1 : undefined,
+      daysOfWeek: isRecurring && recurrenceType === "weekly" ? daysOfWeek : undefined,
+      recurrenceEndDate: isRecurring && recurrenceEndDate
+        ? new Date(recurrenceEndDate + "T23:59:59")
+        : undefined,
     };
-  }, [editingId, title, startDate, endDate, startTime, endTime, location]);
+  }, [editingId, title, startDate, endDate, startTime, endTime, location, isRecurring, recurrenceType, daysOfWeek, recurrenceEndDate]);
 
-  // Returns participant names - caller should convert to EventParticipant[] using familyMembers
-  const getParticipantNames = useCallback((): string[] => {
+  // Returns participant IDs - caller should convert to EventParticipant[] using familyMembers
+  const getParticipantIds = useCallback((): string[] => {
     return participants;
   }, [participants]);
 
@@ -88,10 +111,20 @@ export function useEventEditor() {
     setLocation,
     participants,
     setParticipants,
+    // Recurrence
+    isRecurring,
+    setIsRecurring,
+    recurrenceType,
+    setRecurrenceType,
+    daysOfWeek,
+    setDaysOfWeek,
+    recurrenceEndDate,
+    setRecurrenceEndDate,
+    // Methods
     openEditor,
     closeEditor,
     getUpdatedEvent,
-    getParticipantNames,
+    getParticipantIds,
     getEventIdFromSliceKey,
   };
 }

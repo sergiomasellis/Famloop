@@ -188,9 +188,9 @@ function CreateFamilyContent() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-[1.2fr_1fr]">
-          <Card className="border-4 border-border shadow-[8px_8px_0px_0px_var(--shadow-color)]">
-            <CardHeader className="bg-primary text-primary-foreground border-b-2 border-border">
-              <CardTitle className="flex items-center gap-2 font-black uppercase">
+          <Card className="border-4 border-border shadow-[8px_8px_0px_0px_var(--shadow-color)] overflow-hidden">
+            <CardHeader className="bg-primary text-primary-foreground border-b-2 border-border py-4">
+              <CardTitle className="leading-none flex items-center gap-2 font-black uppercase">
                 <Users className="h-5 w-5" />
                 Family Details
               </CardTitle>
@@ -251,7 +251,7 @@ function CreateFamilyContent() {
                   </div>
                 )}
               </CardContent>
-              <CardFooter className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t-2 border-border bg-muted/40 mt-2 pt-4">
+              <CardFooter className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t-2 border-border bg-muted/40 py-4">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                   <Badge variant="secondary" className="font-bold uppercase">Required</Badge>
                   You can add kids or co-parents after this step.
@@ -268,12 +268,12 @@ function CreateFamilyContent() {
             </form>
           </Card>
 
-          <Card className="border-2 border-dashed border-border">
+          <Card className="border-2 border-dashed border-border py-4">
             <CardHeader>
               <CardTitle className="font-black uppercase">What happens next?</CardTitle>
-              <CardDescription className="font-medium">A quick preview of the remaining steps.</CardDescription>
+              <CardDescription className="font-medium pb-2">A quick preview of the remaining steps.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 pb-2">
               <div className="rounded-xl border-2 border-border bg-primary/10 p-4 shadow-[2px_2px_0px_0px_var(--shadow-color)]">
                 <p className="text-sm font-bold flex items-center gap-3">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-black border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)]">

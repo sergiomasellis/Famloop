@@ -9,15 +9,15 @@ import { cn } from "@/lib/utils";
 
 type ParticipantSelectorProps = {
   familyMembers: FamilyMember[];
-  selectedNames: string[];
-  onChange: (names: string[]) => void;
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
   placeholder?: string;
   className?: string;
 };
 
 export function ParticipantSelector({
   familyMembers,
-  selectedNames,
+  selectedIds,
   onChange,
   placeholder = "Select participants...",
   className,
@@ -36,17 +36,17 @@ export function ParticipantSelector({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const toggleMember = (name: string) => {
-    if (selectedNames.includes(name)) {
-      onChange(selectedNames.filter((n) => n !== name));
+  const toggleMember = (id: string) => {
+    if (selectedIds.includes(id)) {
+      onChange(selectedIds.filter((i) => i !== id));
     } else {
-      onChange([...selectedNames, name]);
+      onChange([...selectedIds, id]);
     }
   };
 
-  const removeMember = (name: string, e: React.MouseEvent | React.KeyboardEvent) => {
+  const removeMember = (id: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    onChange(selectedNames.filter((n) => n !== name));
+    onChange(selectedIds.filter((i) => i !== id));
   };
 
   const getInitials = (name: string) => {
@@ -72,31 +72,32 @@ export function ParticipantSelector({
         )}
       >
         <div className="flex flex-wrap gap-1 flex-1 min-w-0">
-          {selectedNames.length === 0 ? (
+          {selectedIds.length === 0 ? (
             <span className="text-muted-foreground">{placeholder}</span>
           ) : (
-            selectedNames.map((name) => {
-              const member = familyMembers.find((m) => m.name === name);
+            selectedIds.map((id) => {
+              const member = familyMembers.find((m) => m._id === id);
+              if (!member) return null;
               return (
                   <Badge
-                    key={name}
+                    key={id}
                     variant="secondary"
                     className="flex items-center gap-1 pr-1"
                   >
-                    {member?.iconEmoji || getInitials(name)}
-                    <span className="truncate max-w-[80px]">{name}</span>
+                    {member.iconEmoji || getInitials(member.name)}
+                    <span className="truncate max-w-[80px]">{member.name}</span>
                   <span
                     role="button"
                     tabIndex={0}
-                    onClick={(e) => removeMember(name, e)}
+                    onClick={(e) => removeMember(id, e)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        removeMember(name, e);
+                        removeMember(id, e);
                       }
                     }}
                     className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
-                    aria-label={`Remove ${name}`}
+                    aria-label={`Remove ${member.name}`}
                   >
                     <X className="size-3" />
                   </span>
@@ -125,12 +126,12 @@ export function ParticipantSelector({
               </div>
             ) : (
               familyMembers.map((member) => {
-                const isSelected = selectedNames.includes(member.name);
+                const isSelected = selectedIds.includes(member._id);
                 return (
                   <button
                     key={member._id}
                     type="button"
-                    onClick={() => toggleMember(member.name)}
+                    onClick={() => toggleMember(member._id)}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
                       "hover:bg-accent hover:text-accent-foreground",

@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import {
   CalendarDays,
@@ -127,6 +127,26 @@ function DashboardPageContent() {
     draggingEventIdRef.current = dragState?.id ?? null;
   }, [dragState?.id]);
 
+  // Calculate date range based on current view
+  const eventDateRange = useMemo(() => {
+    if (view === "month") {
+      // Month view shows 42 days (6 weeks)
+      const rangeStart = monthGrid.gridStart;
+      const rangeEnd = addDays(monthGrid.gridStart, 42);
+      return { rangeStart, rangeEnd };
+    } else if (view === "day") {
+      // Day view shows single day
+      const rangeStart = selectedDay;
+      const rangeEnd = addDays(selectedDay, 1);
+      return { rangeStart, rangeEnd };
+    } else {
+      // Week view (default) shows 7 days
+      const rangeStart = weekStart;
+      const rangeEnd = addDays(weekStart, 7);
+      return { rangeStart, rangeEnd };
+    }
+  }, [view, weekStart, monthGrid.gridStart, selectedDay]);
+
   // Events management - uses dragState directly from hook (no sync needed)
   const {
     mergedEvents,
@@ -134,7 +154,7 @@ function DashboardPageContent() {
     updateEvent,
     deleteEvent: removeEvent,
     commitDrag,
-  } = useEvents(dragState, FAMILY_ID, weekStart);
+  } = useEvents(dragState, FAMILY_ID, eventDateRange.rangeStart, eventDateRange.rangeEnd);
 
   // Update the ref after useEvents provides commitDrag
   commitDragRef.current = commitDrag;
@@ -278,10 +298,10 @@ function DashboardPageContent() {
         endDateTime.setTime(startDateTime.getTime() + 30 * 60 * 1000);
       }
 
-      // Convert participant names to EventParticipant objects
+      // Convert participant IDs to EventParticipant objects
       const participantObjects = draftParticipants
-        .map((name) => {
-          const member = familyMembers.find((m) => m.name === name);
+        .map((id) => {
+          const member = familyMembers.find((m) => m._id === id);
           if (!member) return null;
           return { id: member._id as string, name: member.name };
         })
@@ -364,7 +384,12 @@ function DashboardPageContent() {
     editor.setEndTime(format(e.end, "HH:mm"));
     editor.setLocation(e.description ?? "");
     // Convert EventParticipant[] to string[] (names)
-    editor.setParticipants((e.participants || []).map((p) => p.name));
+    editor.setParticipants((e.participants || []).map((p) => p.id));
+    // Set recurrence fields
+    editor.setIsRecurring(e.isRecurring ?? false);
+    editor.setRecurrenceType(e.recurrenceType ?? "weekly");
+    editor.setDaysOfWeek(e.daysOfWeek ?? [e.start.getDay()]);
+    editor.setRecurrenceEndDate(e.recurrenceEndDate ? format(e.recurrenceEndDate, "yyyy-MM-dd") : "");
   }
 
   async function saveEdit() {
@@ -372,10 +397,10 @@ function DashboardPageContent() {
     if (!updates || !editor.editingId) return;
 
     // Convert participant names to EventParticipant[]
-    const participantNames = editor.getParticipantNames();
-    const participantObjects = participantNames
-      .map((name) => {
-        const member = familyMembers.find((m) => m.name === name);
+    const participantIds = editor.getParticipantIds();
+    const participantObjects = participantIds
+      .map((id) => {
+        const member = familyMembers.find((m) => m._id === id);
         if (!member) return null;
         return { id: member._id as string, name: member.name };
       })
@@ -520,10 +545,106 @@ function DashboardPageContent() {
         <label className="text-sm font-medium">Participants</label>
         <ParticipantSelector
           familyMembers={familyMembers}
-          selectedNames={editor.participants}
+          selectedIds={editor.participants}
           onChange={editor.setParticipants}
           placeholder="Select family members..."
         />
+      </div>
+      {/* Recurrence Section */}
+      <div className="space-y-3 pt-2 border-t border-border">
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Repeat className="h-4 w-4" />
+            Repeat
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={!editor.isRecurring ? "default" : "outline"}
+              size="sm"
+              onClick={() => editor.setIsRecurring(false)}
+              className="border-2 border-border"
+            >
+              One Time
+            </Button>
+            <Button
+              type="button"
+              variant={editor.isRecurring ? "default" : "outline"}
+              size="sm"
+              onClick={() => editor.setIsRecurring(true)}
+              className="border-2 border-border"
+            >
+              <Repeat className="mr-1 h-3 w-3" />
+              Recurring
+            </Button>
+          </div>
+        </div>
+
+        {editor.isRecurring && (
+          <>
+            {/* Recurrence Type */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Frequency</label>
+              <Select
+                value={editor.recurrenceType}
+                onValueChange={(v) => editor.setRecurrenceType(v as "daily" | "weekly" | "monthly")}
+              >
+                <SelectTrigger className="border-2 border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Day of Week Selector (for weekly) */}
+            {editor.recurrenceType === "weekly" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">On These Days</label>
+                <div className="flex gap-1">
+                  {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+                    <Button
+                      key={index}
+                      type="button"
+                      variant={editor.daysOfWeek.includes(index) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        if (editor.daysOfWeek.includes(index)) {
+                          if (editor.daysOfWeek.length > 1) {
+                            editor.setDaysOfWeek(editor.daysOfWeek.filter((d) => d !== index));
+                          }
+                        } else {
+                          editor.setDaysOfWeek([...editor.daysOfWeek, index].sort());
+                        }
+                      }}
+                      className="w-7 h-7 p-0 border-2 border-border font-bold text-xs"
+                    >
+                      {day}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* End Date (optional) */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">End Date</label>
+              <Input
+                type="date"
+                value={editor.recurrenceEndDate}
+                onChange={(e) => editor.setRecurrenceEndDate(e.target.value)}
+                min={editor.startDate}
+                className="border-2 border-border"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to repeat indefinitely
+              </p>
+            </div>
+          </>
+        )}
       </div>
       <div className="flex items-center justify-between pt-2">
         <Button
@@ -987,7 +1108,7 @@ function DashboardPageContent() {
                       </label>
                       <ParticipantSelector
                         familyMembers={familyMembers}
-                        selectedNames={draftParticipants}
+                        selectedIds={draftParticipants}
                         onChange={setDraftParticipants}
                         placeholder="Select family members..."
                       />

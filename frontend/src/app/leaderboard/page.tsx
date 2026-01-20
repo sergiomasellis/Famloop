@@ -177,9 +177,9 @@ function LeaderboardPageContent() {
       </div>
 
       {/* Leaderboard Card */}
-      <Card className="border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden">
+      <Card className="overflow-hidden">
         <CardHeader className="bg-primary text-primary-foreground border-b-2 border-border">
-          <CardTitle className="flex items-center gap-3 font-black uppercase tracking-tight">
+          <CardTitle className="leading-none flex items-center gap-3 font-black uppercase tracking-tight p-4">
             <Star className="size-6" />
             Weekly Rankings
           </CardTitle>

@@ -60,7 +60,8 @@ function convexEventToEventItem(
 export function useEvents(
   dragState: DragState,
   familyId?: Id<"families">,
-  weekStart?: Date
+  rangeStart?: Date,
+  rangeEnd?: Date
 ) {
   const [error, setError] = useState<string | null>(null);
 
@@ -68,15 +69,13 @@ export function useEvents(
   const committingDragRef = useRef<string | null>(null);
 
   // Calculate date range for the query
-  const startDate = weekStart ? weekStart.getTime() : 0;
-  const endDate = weekStart
-    ? new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000).getTime()
-    : 0;
+  const startDate = rangeStart ? rangeStart.getTime() : 0;
+  const endDate = rangeEnd ? rangeEnd.getTime() : 0;
 
   // Query events from Convex - reactive and real-time!
   const convexEvents = useQuery(
     api.events.getCurrentFamilyEvents,
-    weekStart ? { startDate, endDate } : "skip"
+    rangeStart && rangeEnd ? { startDate, endDate } : "skip"
   );
 
   // Mutations
@@ -87,10 +86,10 @@ export function useEvents(
 
   // Convert Convex events to EventItem format with recurring event expansion
   const eventList = useMemo(() => {
-    if (!convexEvents || !weekStart) return [];
+    if (!convexEvents || !rangeStart || !rangeEnd) return [];
 
-    const rangeStart = new Date(startDate);
-    const rangeEnd = new Date(endDate);
+    const queryRangeStart = new Date(startDate);
+    const queryRangeEnd = new Date(endDate);
 
     // Convert to the format expected by expandRecurringEvents
     const eventsForExpansion = convexEvents.map((event) => ({
@@ -101,8 +100,8 @@ export function useEvents(
     // Expand recurring events into instances
     const expandedEvents = expandRecurringEvents(
       eventsForExpansion,
-      rangeStart,
-      rangeEnd
+      queryRangeStart,
+      queryRangeEnd
     );
 
     // Convert to EventItem format
@@ -116,7 +115,7 @@ export function useEvents(
         event.originalEventId
       )
     );
-  }, [convexEvents, weekStart, startDate, endDate]);
+  }, [convexEvents, rangeStart, rangeEnd, startDate, endDate]);
 
   // Store eventList in ref for stable callbacks
   const eventListRef = useRef(eventList);

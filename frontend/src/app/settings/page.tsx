@@ -163,9 +163,9 @@ function SettingsPageContent() {
     <div className="space-y-6">
       {/* Family Management Card */}
       <Card className="border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden">
-        <CardHeader className="bg-primary text-primary-foreground border-b-2 border-border">
+        <CardHeader className="bg-primary text-primary-foreground border-b-2 border-border py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <CardTitle className="flex items-center gap-3 font-black uppercase tracking-tight">
+            <CardTitle className="leading-none flex items-center gap-3 font-black uppercase tracking-tight">
               <Users className="size-6" />
               Family Management
             </CardTitle>
@@ -180,7 +180,7 @@ function SettingsPageContent() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="pt-4">
+        <CardContent className="py-4">
           {familyLoading ? (
             <div className="text-center py-8">
               <div className="text-4xl animate-bounce mb-2">🏠</div>
@@ -244,13 +244,13 @@ function SettingsPageContent() {
 
       {/* Family Members Card */}
       <Card className="border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden">
-        <CardHeader className="bg-[var(--event-blue)] border-b-2 border-border">
-          <CardTitle className="flex items-center gap-3 font-black uppercase tracking-tight">
+        <CardHeader className="bg-[var(--event-blue)] border-b-2 border-border py-4">
+          <CardTitle className="leading-none flex items-center gap-3 font-black uppercase tracking-tight">
             <UserPlus className="size-6" />
             Family Members
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-4 space-y-4">
+        <CardContent className="py-4 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-sm font-bold text-muted-foreground">
               Add, edit, or remove family members. Parents require email; kids do not.
@@ -287,7 +287,7 @@ function SettingsPageContent() {
                 >
                   {/* Color accent bar */}
                   <div className={`h-2 ${MEMBER_COLORS[index % MEMBER_COLORS.length].replace('/20', '')} border-b-2 border-border`} />
-                  <CardContent className="pt-4 space-y-3">
+                  <CardContent className="py-4 space-y-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="size-12 border-2 border-border shadow-[2px_2px_0px_0px_var(--shadow-color)]">
                         <AvatarImage src={member.profileImageUrl || undefined} alt={member.name} />
@@ -349,13 +349,13 @@ function SettingsPageContent() {
       {/* Invite Parents Card */}
       {family && currentUser?.role === "parent" && (
         <Card className="border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden">
-          <CardHeader className="bg-[var(--event-green)] border-b-2 border-border">
-            <CardTitle className="flex items-center gap-3 font-black uppercase tracking-tight">
+          <CardHeader className="bg-[var(--event-green)] border-b-2 border-border py-4">
+            <CardTitle className="leading-none flex items-center gap-3 font-black uppercase tracking-tight">
               <Mail className="size-6" />
               Invite Parents
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 space-y-4">
+          <CardContent className="py-4 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-sm font-bold text-muted-foreground">
                 Invite another parent to join your family. They will have full parent permissions.
@@ -376,13 +376,13 @@ function SettingsPageContent() {
 
       {/* Security Card */}
       <Card className="border-2 border-border shadow-[4px_4px_0px_0px_var(--shadow-color)] overflow-hidden">
-        <CardHeader className="bg-[var(--event-purple)] border-b-2 border-border">
-          <CardTitle className="flex items-center gap-3 font-black uppercase tracking-tight">
+        <CardHeader className="bg-[var(--event-purple)] border-b-2 border-border py-4">
+          <CardTitle className="leading-none flex items-center gap-3 font-black uppercase tracking-tight">
             <Shield className="size-6" />
             Security & Access
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-4 space-y-4">
+        <CardContent className="py-4 space-y-4">
           <p className="text-sm font-bold text-muted-foreground">
             Family admin password protects family-level changes. Share member logins carefully. Reset parent passwords from the login page if needed.
           </p>
