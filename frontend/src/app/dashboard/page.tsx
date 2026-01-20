@@ -16,6 +16,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { format } from "date-fns";
@@ -27,6 +34,7 @@ import {
   Trash2,
   Save,
   CheckCircle2,
+  Repeat,
 } from "lucide-react";
 
 // Types
@@ -168,6 +176,12 @@ function DashboardPageContent() {
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [eventError, setEventError] = useState<string | null>(null);
 
+  // Recurrence state for new event dialog
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceType, setRecurrenceType] = useState<"daily" | "weekly" | "monthly">("weekly");
+  const [selectedDays, setSelectedDays] = useState<number[]>([new Date().getDay()]);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>("");
+
   // Hover preview state
   const [hoverPreview, setHoverPreview] = useState<HoverPreviewType>(null);
 
@@ -280,6 +294,14 @@ function DashboardPageContent() {
         start: startDateTime,
         end: endDateTime,
         participants: participantObjects,
+        // Recurrence fields
+        isRecurring,
+        recurrenceType: isRecurring ? recurrenceType : undefined,
+        recurrenceCount: isRecurring ? 1 : undefined, // Default interval of 1
+        daysOfWeek: isRecurring && recurrenceType === "weekly" ? selectedDays : undefined,
+        recurrenceEndDate: isRecurring && recurrenceEndDate
+          ? new Date(recurrenceEndDate + "T23:59:59")
+          : undefined,
       });
 
       if (result) {
@@ -287,6 +309,10 @@ function DashboardPageContent() {
         setDraftTitle("");
         setDraftLocation("");
         setDraftParticipants([]);
+        setIsRecurring(false);
+        setRecurrenceType("weekly");
+        setSelectedDays([new Date().getDay()]);
+        setRecurrenceEndDate("");
         setEventError(null);
         setOpenDialog(false);
       } else {
@@ -313,6 +339,10 @@ function DashboardPageContent() {
     setDraftTitle("");
     setDraftLocation("");
     setDraftParticipants([]);
+    setIsRecurring(false);
+    setRecurrenceType("weekly");
+    setSelectedDays([new Date().getDay()]);
+    setRecurrenceEndDate("");
     setOpenDialog(true);
   }
 
@@ -614,9 +644,12 @@ function DashboardPageContent() {
         aria-label={`Edit event ${e.title}`}
       >
         <div className="title-row">
-          <div className="title">
+          <div className="title flex items-center gap-1">
             <span className="mr-1">{e.emoji}</span>
             {e.title}
+            {e.isRecurring && (
+              <Repeat className="h-3 w-3 shrink-0 opacity-70" />
+            )}
           </div>
         </div>
         <div className="time">
@@ -958,6 +991,104 @@ function DashboardPageContent() {
                         onChange={setDraftParticipants}
                         placeholder="Select family members..."
                       />
+                    </div>
+
+                    {/* Recurrence Section */}
+                    <div className="space-y-3 pt-2 border-t border-border">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                          <Repeat className="h-4 w-4" />
+                          Repeat
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            type="button"
+                            variant={!isRecurring ? "default" : "outline"}
+                            onClick={() => setIsRecurring(false)}
+                            className="border-2 border-border"
+                          >
+                            One Time
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={isRecurring ? "default" : "outline"}
+                            onClick={() => setIsRecurring(true)}
+                            className="border-2 border-border"
+                          >
+                            <Repeat className="mr-2 h-4 w-4" />
+                            Recurring
+                          </Button>
+                        </div>
+                      </div>
+
+                      {isRecurring && (
+                        <>
+                          {/* Recurrence Type */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Frequency</label>
+                            <Select
+                              value={recurrenceType}
+                              onValueChange={(v) => setRecurrenceType(v as typeof recurrenceType)}
+                            >
+                              <SelectTrigger className="border-2 border-border">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="daily">Daily</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Day of Week Selector (for weekly) */}
+                          {recurrenceType === "weekly" && (
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">On These Days</label>
+                              <div className="flex gap-1">
+                                {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+                                  <Button
+                                    key={index}
+                                    type="button"
+                                    variant={selectedDays.includes(index) ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => {
+                                      if (selectedDays.includes(index)) {
+                                        if (selectedDays.length > 1) {
+                                          setSelectedDays(selectedDays.filter((d) => d !== index));
+                                        }
+                                      } else {
+                                        setSelectedDays([...selectedDays, index].sort());
+                                      }
+                                    }}
+                                    className="w-9 h-9 p-0 border-2 border-border font-bold"
+                                  >
+                                    {day}
+                                  </Button>
+                                ))}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Select which days of the week this event repeats
+                              </p>
+                            </div>
+                          )}
+
+                          {/* End Date (optional) */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">End Date (optional)</label>
+                            <Input
+                              type="date"
+                              value={recurrenceEndDate}
+                              onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                              min={draftStartDate}
+                              className="border-2 border-border"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Leave empty to repeat indefinitely
+                            </p>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 

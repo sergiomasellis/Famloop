@@ -6,9 +6,10 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { EventItem, DragState } from "@/types";
 import { addDays } from "@/lib/date";
+import { expandRecurringEvents, RecurringEvent } from "@/lib/event-utils";
 
-// Convert Convex event to frontend EventItem
-function convexEventToEventItem(event: {
+// Type for Convex event with recurrence fields
+type ConvexEvent = {
   _id: Id<"events">;
   title: string;
   emoji?: string;
@@ -16,7 +17,19 @@ function convexEventToEventItem(event: {
   startTime: number;
   endTime: number;
   participants?: Array<{ _id: Id<"users">; name: string } | null>;
-}): EventItem {
+  isRecurring?: boolean;
+  recurrenceType?: "daily" | "weekly" | "monthly";
+  recurrenceCount?: number;
+  daysOfWeek?: number[];
+  recurrenceEndDate?: number;
+};
+
+// Convert Convex event to frontend EventItem
+function convexEventToEventItem(
+  event: ConvexEvent,
+  instanceDate?: number,
+  originalEventId?: string
+): EventItem {
   return {
     id: event._id,
     title: event.title,
@@ -30,6 +43,17 @@ function convexEventToEventItem(event: {
         id: p._id as string,
         name: p.name,
       })),
+    // Recurrence fields
+    isRecurring: event.isRecurring,
+    recurrenceType: event.recurrenceType,
+    recurrenceCount: event.recurrenceCount,
+    daysOfWeek: event.daysOfWeek,
+    recurrenceEndDate: event.recurrenceEndDate
+      ? new Date(event.recurrenceEndDate)
+      : undefined,
+    // Instance fields
+    instanceDate: instanceDate ? new Date(instanceDate) : undefined,
+    originalEventId,
   };
 }
 
@@ -61,11 +85,38 @@ export function useEvents(
   const deleteEventMutation = useMutation(api.events.remove);
   const moveEventMutation = useMutation(api.events.move);
 
-  // Convert Convex events to EventItem format
+  // Convert Convex events to EventItem format with recurring event expansion
   const eventList = useMemo(() => {
-    if (!convexEvents) return [];
-    return convexEvents.map(convexEventToEventItem);
-  }, [convexEvents]);
+    if (!convexEvents || !weekStart) return [];
+
+    const rangeStart = new Date(startDate);
+    const rangeEnd = new Date(endDate);
+
+    // Convert to the format expected by expandRecurringEvents
+    const eventsForExpansion = convexEvents.map((event) => ({
+      ...event,
+      _id: event._id as string,
+    }));
+
+    // Expand recurring events into instances
+    const expandedEvents = expandRecurringEvents(
+      eventsForExpansion,
+      rangeStart,
+      rangeEnd
+    );
+
+    // Convert to EventItem format
+    return expandedEvents.map((event) =>
+      convexEventToEventItem(
+        {
+          ...event,
+          _id: event._id as Id<"events">,
+        },
+        event.instanceDate,
+        event.originalEventId
+      )
+    );
+  }, [convexEvents, weekStart, startDate, endDate]);
 
   // Store eventList in ref for stable callbacks
   const eventListRef = useRef(eventList);
@@ -118,6 +169,12 @@ export function useEvents(
           endTime: event.end.getTime(),
           participantIds: event.participants?.map((p) => p.id as Id<"users">),
           source: "manual",
+          // Recurrence fields
+          isRecurring: event.isRecurring,
+          recurrenceType: event.recurrenceType,
+          recurrenceCount: event.recurrenceCount,
+          daysOfWeek: event.daysOfWeek,
+          recurrenceEndDate: event.recurrenceEndDate?.getTime(),
         });
 
         return {
@@ -147,6 +204,12 @@ export function useEvents(
           startTime: updates.start?.getTime(),
           endTime: updates.end?.getTime(),
           participantIds: updates.participants?.map((p) => p.id as Id<"users">),
+          // Recurrence fields
+          isRecurring: updates.isRecurring,
+          recurrenceType: updates.recurrenceType,
+          recurrenceCount: updates.recurrenceCount,
+          daysOfWeek: updates.daysOfWeek,
+          recurrenceEndDate: updates.recurrenceEndDate?.getTime(),
         });
 
         // The query will automatically update with the new data

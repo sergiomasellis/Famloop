@@ -48,9 +48,18 @@ export default defineSchema({
     endTime: v.number(),
     source: v.optional(v.string()),
     createdAt: v.number(),
+    // Recurrence fields
+    isRecurring: v.optional(v.boolean()),
+    recurrenceType: v.optional(
+      v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"))
+    ),
+    recurrenceCount: v.optional(v.number()), // interval (every N days/weeks/months)
+    daysOfWeek: v.optional(v.array(v.number())), // 0=Sun..6=Sat for weekly
+    recurrenceEndDate: v.optional(v.number()), // optional end date timestamp
   })
     .index("by_familyId", ["familyId"])
-    .index("by_familyId_time", ["familyId", "startTime"]),
+    .index("by_familyId_time", ["familyId", "startTime"])
+    .index("by_familyId_recurring", ["familyId", "isRecurring"]),
 
   eventParticipants: defineTable({
     eventId: v.id("events"),

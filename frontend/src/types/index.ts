@@ -11,6 +11,15 @@ export type EventItem = {
   start: Date;
   end: Date;
   participants?: EventParticipant[];
+  // Recurrence fields
+  isRecurring?: boolean;
+  recurrenceType?: "daily" | "weekly" | "monthly";
+  recurrenceCount?: number;
+  daysOfWeek?: number[];
+  recurrenceEndDate?: Date;
+  // For recurring instances
+  instanceDate?: Date;
+  originalEventId?: string;
 };
 
 // API-aligned Event type (from backend)

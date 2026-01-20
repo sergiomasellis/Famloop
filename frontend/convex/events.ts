@@ -10,17 +10,44 @@ export const getByFamilyAndDateRange = query({
     endDate: v.number(),
   },
   handler: async (ctx, args) => {
-    const events = await ctx.db
+    // Get non-recurring events within the date range
+    const nonRecurringEvents = await ctx.db
       .query("events")
       .withIndex("by_familyId_time", (q) =>
         q.eq("familyId", args.familyId).gte("startTime", args.startDate)
       )
-      .filter((q) => q.lte(q.field("startTime"), args.endDate))
+      .filter((q) =>
+        q.and(
+          q.lte(q.field("startTime"), args.endDate),
+          q.or(
+            q.eq(q.field("isRecurring"), false),
+            q.eq(q.field("isRecurring"), undefined)
+          )
+        )
+      )
       .collect();
+
+    // Get all recurring events for the family
+    const recurringEvents = await ctx.db
+      .query("events")
+      .withIndex("by_familyId", (q) => q.eq("familyId", args.familyId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("isRecurring"), true),
+          q.lte(q.field("startTime"), args.endDate),
+          q.or(
+            q.eq(q.field("recurrenceEndDate"), undefined),
+            q.gte(q.field("recurrenceEndDate"), args.startDate)
+          )
+        )
+      )
+      .collect();
+
+    const allEvents = [...nonRecurringEvents, ...recurringEvents];
 
     // Get participants for each event
     const eventsWithParticipants = await Promise.all(
-      events.map(async (event) => {
+      allEvents.map(async (event) => {
         const participants = await ctx.db
           .query("eventParticipants")
           .withIndex("by_eventId", (q) => q.eq("eventId", event._id))
@@ -65,17 +92,46 @@ export const getCurrentFamilyEvents = query({
       return [];
     }
 
-    const events = await ctx.db
+    // Get non-recurring events within the date range
+    const nonRecurringEvents = await ctx.db
       .query("events")
       .withIndex("by_familyId_time", (q) =>
         q.eq("familyId", user.familyId!).gte("startTime", args.startDate)
       )
-      .filter((q) => q.lte(q.field("startTime"), args.endDate))
+      .filter((q) =>
+        q.and(
+          q.lte(q.field("startTime"), args.endDate),
+          q.or(
+            q.eq(q.field("isRecurring"), false),
+            q.eq(q.field("isRecurring"), undefined)
+          )
+        )
+      )
       .collect();
+
+    // Get all recurring events for the family (they might repeat into any range)
+    // Only get recurring events that started before or during the range
+    // and haven't ended before the range start
+    const recurringEvents = await ctx.db
+      .query("events")
+      .withIndex("by_familyId", (q) => q.eq("familyId", user.familyId!))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("isRecurring"), true),
+          q.lte(q.field("startTime"), args.endDate),
+          q.or(
+            q.eq(q.field("recurrenceEndDate"), undefined),
+            q.gte(q.field("recurrenceEndDate"), args.startDate)
+          )
+        )
+      )
+      .collect();
+
+    const allEvents = [...nonRecurringEvents, ...recurringEvents];
 
     // Get participants for each event
     const eventsWithParticipants = await Promise.all(
-      events.map(async (event) => {
+      allEvents.map(async (event) => {
         const participants = await ctx.db
           .query("eventParticipants")
           .withIndex("by_eventId", (q) => q.eq("eventId", event._id))
@@ -135,6 +191,14 @@ export const create = mutation({
     endTime: v.number(),
     participantIds: v.optional(v.array(v.id("users"))),
     source: v.optional(v.string()),
+    // Recurrence fields
+    isRecurring: v.optional(v.boolean()),
+    recurrenceType: v.optional(
+      v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"))
+    ),
+    recurrenceCount: v.optional(v.number()),
+    daysOfWeek: v.optional(v.array(v.number())),
+    recurrenceEndDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -161,6 +225,12 @@ export const create = mutation({
       endTime: args.endTime,
       source: args.source,
       createdAt: Date.now(),
+      // Recurrence fields
+      isRecurring: args.isRecurring ?? false,
+      recurrenceType: args.recurrenceType,
+      recurrenceCount: args.recurrenceCount,
+      daysOfWeek: args.daysOfWeek,
+      recurrenceEndDate: args.recurrenceEndDate,
     });
 
     // Add participants
@@ -187,6 +257,14 @@ export const update = mutation({
     startTime: v.optional(v.number()),
     endTime: v.optional(v.number()),
     participantIds: v.optional(v.array(v.id("users"))),
+    // Recurrence fields
+    isRecurring: v.optional(v.boolean()),
+    recurrenceType: v.optional(
+      v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"))
+    ),
+    recurrenceCount: v.optional(v.number()),
+    daysOfWeek: v.optional(v.array(v.number())),
+    recurrenceEndDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -219,12 +297,23 @@ export const update = mutation({
       emoji: string;
       startTime: number;
       endTime: number;
+      isRecurring: boolean;
+      recurrenceType: "daily" | "weekly" | "monthly";
+      recurrenceCount: number;
+      daysOfWeek: number[];
+      recurrenceEndDate: number;
     }> = {};
     if (args.title !== undefined) updates.title = args.title;
     if (args.description !== undefined) updates.description = args.description;
     if (args.emoji !== undefined) updates.emoji = args.emoji;
     if (args.startTime !== undefined) updates.startTime = args.startTime;
     if (args.endTime !== undefined) updates.endTime = args.endTime;
+    // Recurrence fields
+    if (args.isRecurring !== undefined) updates.isRecurring = args.isRecurring;
+    if (args.recurrenceType !== undefined) updates.recurrenceType = args.recurrenceType;
+    if (args.recurrenceCount !== undefined) updates.recurrenceCount = args.recurrenceCount;
+    if (args.daysOfWeek !== undefined) updates.daysOfWeek = args.daysOfWeek;
+    if (args.recurrenceEndDate !== undefined) updates.recurrenceEndDate = args.recurrenceEndDate;
 
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch(args.id, updates);
